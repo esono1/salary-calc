@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.02.28">
+<meta name="salary-page-version" content="2026.11.02.29">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -448,6 +448,28 @@ function syncDefaults() {
     }
   }
   state.priceVersion = PRICE_VERSION;
+  mergeDupServices();
+}
+// 舊版掃描在 Excel 匯入的月份（項目 id 是 s0、s1…）另外加了一個同名項目，月明細會分成兩列：
+// 把設定裡的 id 那一份併回該月原本的同名項目（張數、工作單紀錄都改過去）
+function mergeDupServices() {
+  for (const m of Object.values(state.months || {})) {
+    const svcs = m.services || [];
+    for (let i = svcs.length - 1; i > 0; i--) {
+      const dup = svcs[i].id, keep = svcs.slice(0, i).find(s => s.name === svcs[i].name && s.id !== dup);
+      if (!keep || !state.services.some(p => p.id === dup)) continue;
+      for (const day of Object.values(m.days || {})) {
+        const c = day.c && day.c[dup];
+        if (c) {
+          const t = day.c[keep.id] || (day.c[keep.id] = [0, 0, 0]);
+          c.forEach((v, j) => { t[j] = (t[j] || 0) + (v || 0); });
+          delete day.c[dup];
+        }
+        for (const s of Object.values(day.slipLog || {})) for (const x of s.items || []) if (x.id === dup) x.id = keep.id;
+      }
+      svcs.splice(i, 1);
+    }
+  }
 }
 const DEFAULT_RULES = {
   diligence: 2500,      // 勤勞獎金（每月預設）
@@ -679,6 +701,13 @@ function getMonth(k, create) {
   return m;
 }
 function monthServices(k) { const m = state.months[k]; return m ? m.services : state.services; }
+// 設定裡的項目 id → 該月價目表裡同一個項目的 id（id 不同時用名稱對，跟 visibleServices 一樣）
+function monthSvcId(k, id) {
+  const msvcs = monthServices(k);
+  if (msvcs.some(s => s.id === id)) return id;
+  const pref = state.services.find(s => s.id === id), same = pref && msvcs.find(s => s.name === pref.name);
+  return same ? same.id : id;
+}
 // 依使用者在「設定」的顯示勾選與順序排列某月的項目。
 // 價格用該月的價目表；used(id) 為真的項目（已有張數）即使隱藏也照樣顯示
 function visibleServices(k, used) {
@@ -1825,10 +1854,11 @@ function addScan() {
   const p = scanDraft, date = $('#scanDate').value;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('請選擇日期'); return; }
   const k = date.slice(0, 7), d = +date.slice(8);
-  const picks = p.items.map((it, i) => ({ it, id: document.querySelector(`[data-si="${i}"]`).value, qty: toNum(document.querySelector(`[data-sq="${i}"]`).value) }))
-    .filter(x => x.id && x.qty > 0);
-  if (!picks.length) { toast('沒有要加入的項目'); return; }
   const day = getDay(k, d, true), m = state.months[k];
+  // 選單是設定裡的項目（pref）；記到該月時要用該月同一個項目的 id，不然月明細會多出一列同名的
+  const picks = p.items.map((it, i) => ({ it, pref: document.querySelector(`[data-si="${i}"]`).value, qty: toNum(document.querySelector(`[data-sq="${i}"]`).value) }))
+    .filter(x => x.pref && x.qty > 0).map(x => Object.assign(x, { id: monthSvcId(k, x.pref) }));
+  if (!picks.length) { toast('沒有要加入的項目'); cleanupDay(k, d); return; }
   state.slipMap = state.slipMap || {};
   const key = slipKey(p.dateGuessed ? '' : p.date, date, p.no);
   const prev = p.no ? slipRecorded(date, key) : null;
@@ -1840,13 +1870,13 @@ function addScan() {
   const ded = Math.max(0, picks.reduce((a, x) => a + x.qty, 0) - 1);
   if (ded) day.ded = toNum(day.ded) + ded;
   const added = [];
-  for (const { it, id, qty } of picks) {
-    if (!m.services.some(s => s.id === id)) { const pref = state.services.find(s => s.id === id); if (pref) m.services.push(clone(pref)); }
+  for (const { it, pref, id, qty } of picks) {
+    if (!m.services.some(s => s.id === id)) { const ps = state.services.find(s => s.id === id); if (ps) m.services.push(clone(ps)); }
     const c = day.c[id] || (day.c[id] = [0, 0, 0]);
     c[p.kind] += qty;
     // 記住這個品項名稱，下次直接對應（亂碼、太短的不記，免得下次對錯）
-    if ((it.raw.match(/[一-鿿]/g) || []).length >= 2 && it.raw.length >= 4) state.slipMap[it.raw] = id;
-    added.push(`${(state.services.find(s => s.id === id) || {}).name} ×${qty}`);
+    if ((it.raw.match(/[一-鿿]/g) || []).length >= 2 && it.raw.length >= 4) state.slipMap[it.raw] = pref;
+    added.push(`${(state.services.find(s => s.id === pref) || {}).name} ×${qty}`);
   }
   day.slipLog = Object.assign(day.slipLog || {}, { [key]: { kind: p.kind, items: picks.map(x => ({ id: x.id, qty: x.qty })),
     time: p.time || '', no: p.no || '', date: p.dateGuessed ? '' : p.date || '', ...(ded ? { ded } : {}) } });
