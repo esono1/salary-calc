@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.03.30">
+<meta name="salary-page-version" content="2026.11.03.31">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -3131,10 +3131,10 @@ function fetchLeaveTable(url) {
   });
 }
 // 假別：假表系統用 isBirthday／isAnnual／isMarriage／isFuneral／isMenstrual 標示（假表上顯示 生日／特／婚／喪／生理）。
-// 計入請假天數的只有一般請假與生日假；特休、婚、喪假、生理假不計入（生理假依性平法不能影響全勤），也都不會 -1000。
-// 一般請假可以只請一段時間（假表「請N 18-22」），照樣算一天請假、照樣可能 -1000
+// 計入請假天數的是一般請假、生日假與生理假（生理假：使用者 2026-11-03 決定要算）；特休、婚、喪假不計入。
+// 只有一般請假會 -1000。一般請假可以只請一段時間（假表「請N 18-22」），照樣算一天請假、照樣可能 -1000
 const leaveKindOf = l => l.isMarriage ? '婚假' : l.isFuneral ? '喪假' : l.isAnnual ? '特休' : l.isBirthday ? '生日假' : l.isMenstrual ? '生理假' : '請假';
-const LEAVE_NOT_COUNTED = new Set(['特休', '婚假', '喪假', '生理假']);
+const LEAVE_NOT_COUNTED = new Set(['特休', '婚假', '喪假']);
 // 整理出某人某月的休假（R）與請假，存在月份裡，離線也能計算
 function leaveSummary(payload, code, k) {
   const emp = (payload.employees || []).find(e => e.name === code);
