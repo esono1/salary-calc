@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.02.29">
+<meta name="salary-page-version" content="2026.11.03.30">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1100,8 +1100,8 @@ function leaveCard(k, c) {
       : '不發激勵獎金' + (c.leaveFactor === 0.5 ? '；久任、勤勞發一半' : c.leaveFactor === 0 ? '；久任、勤勞不發' : '');
     const when = new Date(lv.fetchedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     body = `<div class="rows">
-      <div class="row"><div class="k">休假（R）<small>${lv.rDays.map(md).join('、') || '無'}</small></div><div class="v">${lv.rDays.length} 天</div></div>
-      ${lv.items.map(x => `<div class="row"><div class="k">${md(x.date)} ${esc(x.kind)}<small>${x.pending ? '待核准，還沒計入' : x.counted ? '計入請假天數' : '不計入請假天數'}</small></div><div class="v${x.minus1000 ? ' neg' : ''}">${x.minus1000 ? '−' + fmt(state.rules.leaveDeduct) : ''}</div></div>`).join('')}
+      <div class="row"><div class="k">休假（R）<small>${lv.rDays.map(d => md(d) + (lv.rBack && lv.rBack[d] ? `（銷${esc(lv.rBack[d])}）` : '')).join('、') || '無'}</small></div><div class="v">${lv.rDays.length} 天</div></div>
+      ${lv.items.map(x => `<div class="row"><div class="k">${md(x.date)} ${esc(x.kind)}${x.hours ? ` ${esc(x.hours)}` : ''}<small>${x.pending ? '待核准，還沒計入' : x.counted ? '計入請假天數' : '不計入請假天數'}</small></div><div class="v${x.minus1000 ? ' neg' : ''}">${x.minus1000 ? '−' + fmt(state.rules.leaveDeduct) : ''}</div></div>`).join('')}
       <div class="row total"><div class="k">請假天數<small>${effect}</small></div><div class="v">${c.leaveDays} 天</div></div>
     </div>
     <p class="note">${lv.sourceUpdatedAt ? `假表最後修改：${esc(lv.sourceUpdatedAt)}　·　` : ''}App 讀取於 ${when}</p>`;
@@ -2775,8 +2775,8 @@ function monthSheetXml(k) {
   const lv = c.leave, md = d => `${+d.slice(5, 7)}/${+d.slice(8)}`;
   if (lv) {
     put(r++, 1, '休假與請假（休假表）', null, 1);
-    put(r, 1, '休假(R)'); put(r++, 2, `${lv.rDays.length} 天：${lv.rDays.map(md).join('、')}`);
-    lv.items.forEach(x => { put(r, 1, md(x.date)); put(r++, 2, `${x.kind}${x.pending ? '（待核准）' : ''}${x.minus1000 ? ' -1000' : ''}${x.counted ? '' : '（不計入請假）'}`); });
+    put(r, 1, '休假(R)'); put(r++, 2, `${lv.rDays.length} 天：${lv.rDays.map(d => md(d) + (lv.rBack && lv.rBack[d] ? `（銷${lv.rBack[d]}）` : '')).join('、')}`);
+    lv.items.forEach(x => { put(r, 1, md(x.date)); put(r++, 2, `${x.kind}${x.hours ? ' ' + x.hours : ''}${x.pending ? '（待核准）' : ''}${x.minus1000 ? ' -1000' : ''}${x.counted ? '' : '（不計入請假）'}`); });
     put(r, 1, '請假天數'); put(r++, 2, `${c.leaveDays} 天${c.leaveDeduct ? `，請假扣款 ${c.leaveDeduct}` : ''}`);
     r++;
   }
@@ -2884,7 +2884,11 @@ async function exportExcel(keys) {
 // 下面是假表系統判斷「請N / 請N-1000」的程式，2026-11-01 從 vacation-system-main/hosting-share/index.html
 // 原樣複製（含婚、喪假：生日／特休／婚／喪假不排順位、不會 -1000）。用當天正式假表資料比對，
 // 75 筆請假標示與休假日全部相同。假表系統改了扣款規則，這裡要跟著換。
+// 2026-11-03 再同步一次：生理假（佔每日名額、不排順位、不會 -1000）、銷假 leaveCancels（整天銷假的 R 變 cancelled、
+// 空出抽籤名額）、請假可只請一段時間（標籤「請N 18-22」，空格後是時段）。
 function leaveTableRules(data) {
+// 請假改成送出就生效（不用審核）：舊的「待審核」一律視為已生效（同假表系統的 migrateData）
+(data.extraLeaves||[]).forEach(l=>{ if(l.status==='pending') l.status='approved'; });
 function getDates(s,e){ const r=[],c=new Date(s),l=new Date(e); while(c<=l){r.push(c.toISOString().slice(0,10));c.setDate(c.getDate()+1);} return r; }
 function isWk(d){ const n=new Date(d+'T00:00:00').getDay(); return n===0||n===6; }
 const _isFreeShift=s=>(data.freeShifts||[]).includes(s);
@@ -2917,10 +2921,11 @@ function getLim(p,shift,d,gender){
 }
 function getApps(periodId,shift,d){ return data.applications.filter(a=>a.periodId===periodId&&a.shift===shift&&a.dates.includes(d)); }
 const EL_KINDS=[
-  {key:'birthday',flag:'isBirthday',name:'生日假',mark:'生',slot:true},
+  {key:'birthday',flag:'isBirthday',name:'生日假',mark:'生日',slot:true},
   {key:'annual',flag:'isAnnual',name:'特休假',mark:'特',slot:true},
   {key:'marriage',flag:'isMarriage',name:'婚假',mark:'婚'},
-  {key:'funeral',flag:'isFuneral',name:'喪假',mark:'喪'}];
+  {key:'funeral',flag:'isFuneral',name:'喪假',mark:'喪'},
+  {key:'menstrual',flag:'isMenstrual',name:'生理假',mark:'生理',slot:true}];
 function _elKind(l){ return (l&&EL_KINDS.find(k=>l[k.flag]))||null; }
 function getBirthdayCount(period,shift,d,gender){
   const pid=period.id;
@@ -2935,7 +2940,16 @@ function getBirthdayCount(period,shift,d,gender){
     return true;
   }).length;
 }
-function buildStatusMap(period){
+const R_ST=['lottery','direct'];
+function _cancelOf(pid,empId,date){ return (data.leaveCancels||[]).find(c=>c.periodId===pid&&c.empId===empId&&c.date===date)||null; }
+const _hrsOf=x=>x&&x.start&&x.end?`${x.start}-${x.end}`:'';
+function _hWinCount(p,h){
+  const ws=h.winners||[];
+  if(!(data.leaveCancels||[]).some(c=>c.periodId===p.id&&c.date===h.date&&!c.start)) return ws.length;
+  const dm=_deptMapOf(p);
+  return ws.filter(w=>{ const e=data.employees.find(x=>x.name===w.name&&_deptIn(p,x,dm)===w.dept); const c=e&&_cancelOf(p.id,e.id,h.date); return !(c&&!c.start); }).length;
+}
+function buildStatusMap(period,raw){
   const pid=period.id;
   const dates=getDates(period.start,period.end);
   const map={};
@@ -2976,7 +2990,7 @@ function buildStatusMap(period){
           if(hRec) apps.forEach(a=>{
             if(!map[a.empId])map[a.empId]={};
             if(map[a.empId][d]==='pending'){
-              map[a.empId][d]=hRec.winners.length<hRec.limit?'direct':'needs-lottery';
+              map[a.empId][d]=_hWinCount(period,hRec)<hRec.limit?'direct':'needs-lottery';
             }
           });
         }
@@ -3004,6 +3018,7 @@ function buildStatusMap(period){
       if(!st||st==='loser') map[e.id][t.date]=t.open?'typhoon-work':'typhoon-off';
     });
   });
+  if(!raw) (data.leaveCancels||[]).filter(c=>c.periodId===pid&&!c.start).forEach(c=>{ const m=map[c.empId]; if(m&&R_ST.includes(m[c.date])) m[c.date]='cancelled'; });
   return map;
 }
 function _inPeriodScope(p,e){
@@ -3077,10 +3092,11 @@ function extraLeaveRank(l){
 function extraLeaveLabel(empId,date){
   const l=(data.extraLeaves||[]).find(x=>x.empId===empId&&x.date===date&&x.status==='approved'&&!_elKind(x));
   const n=l?extraLeaveRank(l):0;
-  if(!n) return '請';
-  return '請'+n+(!l.waived&&extraLeaveOver(l)?'-1000':'');
+  const label=!n?'請':'請'+n+(!l.waived&&extraLeaveOver(l)?'-1000':'');
+  const hrs=_hrsOf(l);
+  return hrs?label+' '+hrs:label;
 }
-  return { extraLeaveLabel, buildStatusMap };
+  return { extraLeaveLabel, buildStatusMap, _cancelOf, _hrsOf };
 }
 
 const userErr = msg => Object.assign(new Error(msg), { userMsg: msg });
@@ -3114,20 +3130,26 @@ function fetchLeaveTable(url) {
     window.AndroidBridge.fetchLeaveTable(url);
   });
 }
-// 假別：假表系統用 isBirthday／isAnnual／isMarriage／isFuneral 標示（假表上顯示 生／特／婚／喪）。
-// 計入請假天數的只有一般請假與生日假；特休、婚、喪假不計入，也都不會 -1000
-const leaveKindOf = l => l.isMarriage ? '婚假' : l.isFuneral ? '喪假' : l.isAnnual ? '特休' : l.isBirthday ? '生日假' : '請假';
-const LEAVE_NOT_COUNTED = new Set(['特休', '婚假', '喪假']);
+// 假別：假表系統用 isBirthday／isAnnual／isMarriage／isFuneral／isMenstrual 標示（假表上顯示 生日／特／婚／喪／生理）。
+// 計入請假天數的只有一般請假與生日假；特休、婚、喪假、生理假不計入（生理假依性平法不能影響全勤），也都不會 -1000。
+// 一般請假可以只請一段時間（假表「請N 18-22」），照樣算一天請假、照樣可能 -1000
+const leaveKindOf = l => l.isMarriage ? '婚假' : l.isFuneral ? '喪假' : l.isAnnual ? '特休' : l.isBirthday ? '生日假' : l.isMenstrual ? '生理假' : '請假';
+const LEAVE_NOT_COUNTED = new Set(['特休', '婚假', '喪假', '生理假']);
 // 整理出某人某月的休假（R）與請假，存在月份裡，離線也能計算
 function leaveSummary(payload, code, k) {
   const emp = (payload.employees || []).find(e => e.name === code);
   if (!emp) throw userErr(`休假表裡找不到編號「${code}」，請確認「設定」裡的編號`);
   const rules = leaveTableRules(payload);
   const inMonth = d => String(d).slice(0, 7) === k;
-  const rDays = new Set();
+  // 休假（R）：整天銷假的不算（假表「銷」）；部分時間銷假仍是 R，記下回來上班的時段（假表「銷18-22」）
+  const rDays = new Set(), rBack = {};
   (payload.periods || []).filter(p => p.start.slice(0, 7) <= k && k <= p.end.slice(0, 7)).forEach(p => {
     const st = rules.buildStatusMap(p)[emp.id] || {};
-    for (const d in st) if (inMonth(d) && (st[d] === 'lottery' || st[d] === 'direct')) rDays.add(d);
+    for (const d in st) if (inMonth(d) && (st[d] === 'lottery' || st[d] === 'direct')) {
+      rDays.add(d);
+      const back = rules._hrsOf(rules._cancelOf(p.id, emp.id, d));
+      if (back) rBack[d] = back;
+    }
   });
   const items = (payload.extraLeaves || [])
     .filter(l => l.empId === emp.id && inMonth(l.date) && (l.status === 'approved' || l.status === 'pending'))
@@ -3136,8 +3158,9 @@ function leaveSummary(payload, code, k) {
       const kind = leaveKindOf(l);
       const pending = l.status === 'pending';
       const counted = !pending && !LEAVE_NOT_COUNTED.has(kind);
-      const minus1000 = !pending && kind === '請假' && rules.extraLeaveLabel(emp.id, l.date).endsWith('-1000');
-      return { date: l.date, kind, counted, minus1000, pending };
+      const minus1000 = !pending && kind === '請假' && rules.extraLeaveLabel(emp.id, l.date).split(' ')[0].endsWith('-1000');
+      const hours = l.start && l.end ? `${l.start}-${l.end}` : '';
+      return { date: l.date, kind, counted, minus1000, pending, ...(hours ? { hours } : {}) };
     });
   // 晚班日：假表上有填色的日子（期別設定的假日；沒設定時六、日是假日），而且自己假日的下班時間過了半夜（例如 02:00）
   const dt = (payload.deptTimes || {})[emp.dept] || {}, sn = /^(\d{1,2})-(\d{1,2})$/.exec(emp.dept || '');
@@ -3155,7 +3178,7 @@ function leaveSummary(payload, code, k) {
     }
   });
   const lateDays = lateEnd ? Object.keys(dayTypes).filter(ds => dayTypes[ds] === 'h').sort() : [];
-  return { fetchedAt: new Date().toISOString(), rDays: [...rDays].sort(), items, lateDays, lateEnd, dayTypes };
+  return { fetchedAt: new Date().toISOString(), rDays: [...rDays].sort(), rBack, items, lateDays, lateEnd, dayTypes };
 }
 let leaveBusy = false, leaveDayCache = null;
 async function refreshLeave(k, quiet) {
