@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.06.35">
+<meta name="salary-page-version" content="2026.11.06.36">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -911,6 +911,27 @@ function render() {
 
 /* ================= 每日登錄 ================= */
 // 沒填到職年月：年資當 0 個月，抽成會用未達標價、沒有久任津貼（網頁版和 App 的設定是分開的，各自要填）
+// iPhone 的 Safari：網站超過 7 天沒開，可能把存的資料清掉；加到主畫面、從主畫面開就不會
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => !!navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+const IOS_HINT_KEY = 'salary-ios-hint-off';
+function storageWarn() {
+  if (window.AndroidBridge || cloud || window.claude || !isIOS() || isStandalone()) return '';   // claude.ai 版存在雲端
+  try { if (localStorage.getItem(IOS_HINT_KEY)) return ''; } catch (e) { /* 讀不到就照樣提醒 */ }
+  return `<p class="warn" style="margin:0 0 10px">iPhone 請先「加入主畫面」：用 Safari 開時，超過 7 天沒打開這個網頁，Safari 可能把資料清掉。
+    點下方「分享」→「加入主畫面」，之後從主畫面的圖示開；也記得偶爾到「設定」匯出備份。
+    <button class="btn sm" data-act="iosHintOff" style="margin-top:6px">知道了</button></p>`;
+}
+// 上次匯出備份的時間（每台裝置自己記，不放進資料裡）
+const BACKUP_KEY = 'salary-last-backup';
+function markBackup() { try { localStorage.setItem(BACKUP_KEY, new Date().toISOString()); } catch (e) { /* 略過 */ } }
+function backupLine() {
+  if (cloud || window.claude) return '';
+  let t = null; try { t = localStorage.getItem(BACKUP_KEY); } catch (e) { /* 略過 */ }
+  if (!t) return '<p class="note" style="margin-top:0">這台裝置還沒匯出過備份。</p>';
+  const days = Math.floor((Date.now() - new Date(t)) / 86400000), d = new Date(t);
+  return `<p class="note" style="margin-top:0${days > 30 ? ';color:var(--danger)' : ''}">上次匯出備份：${d.getMonth() + 1}/${d.getDate()}（${days ? days + ' 天前' : '今天'}）${days > 30 ? '，建議再備份一次' : ''}</p>`;
+}
 const hireWarn = () => state.profile.hire ? ''
   : '<p class="warn" style="margin:0 0 10px">還沒填「到職年月」：年資會當成 0 個月，抽成用未達標價、久任津貼也不會算。請到「設定 → 個人資料」填寫。</p>';
 function renderDaily() {
@@ -987,6 +1008,7 @@ function renderDaily() {
     : (lvDay.dayTypes[thisDate] === 'h' && !lvDay.lateEnd) ? '<p class="note">休假表上你的假日下班時間沒有過半夜，所以不自動算晚班；如果有上晚班請自己勾「晚班」。</p>' : '';
 
   $('#view-daily').innerHTML = `
+    ${storageWarn()}
     ${hireWarn()}
     <div class="days" id="dayStrip">${strip}</div>
     <div class="card">
@@ -1081,7 +1103,8 @@ document.addEventListener('change', e => {
   if (el.dataset.dfield) {
     const day = getDay(curKey, selDay, true);
     const f = el.dataset.dfield;
-    day[f] = el.type === 'checkbox' ? el.checked : (f === 'note' ? el.value.trim() : toNum(el.value));
+    // 數字欄（張數、分鐘、金額）不會是負的：打錯成負數（例如遲到 -5）會讓合計變少、誤發激勵獎金
+    day[f] = el.type === 'checkbox' ? el.checked : (f === 'note' ? el.value.trim() : Math.max(0, toNum(el.value)));
     if ((f === 'night' || f === 'a12') && day.nightAuto) day.nightAuto = false;   // 手動改了就不再自動算
     if (f === 'typhoon') { delete day.nightAuto; applyNight(curKey, selDay); }    // 颱風假：先回到預設（不算），之後仍可手動改
     cleanupDay(curKey, selDay); save(); renderDaily();
@@ -1302,6 +1325,9 @@ async function monthAction(act, ds) {
     if (await ask('把計算規則恢復成預設值？', '恢復')) { state.rules = clone(DEFAULT_RULES); save(); renderSettings(); toast('已恢復預設規則'); }
   } else if (act === 'export') {
     exportData();
+  } else if (act === 'iosHintOff') {
+    try { localStorage.setItem(IOS_HINT_KEY, '1'); } catch (e) { /* 略過 */ }
+    renderDaily();
   } else if (act === 'leave') {
     refreshLeave(curKey);
   } else if (act === 'scan') {
@@ -1433,6 +1459,7 @@ ${appScan() && typeof window.AndroidBridge.scanSlipPaddle === 'function' ? `
     <div class="card">
       <h2>資料儲存與備份</h2>
       <p class="note" style="margin-top:0" id="syncNote">${esc(syncText())}</p>
+      ${backupLine()}
       <h2 style="margin-top:14px">匯出 Excel</h2>
       ${monthPicker(monthsList)}
       <div class="btns" style="margin-top:10px">
@@ -2913,12 +2940,13 @@ const u8ToBase64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x800
 async function saveBinary(filename, u8, mime) {
   if (window.AndroidBridge) {
     if (typeof window.AndroidBridge.saveBase64 !== 'function') { toast('請先安裝新版 App（1.8 以上）才能匯出 Excel'); return; }
+    backupPending = true;                  // 匯出 Excel 也算備份過（存好後 onAndroidSaved 記下時間）
     window.AndroidBridge.saveBase64(filename, mime, u8ToBase64(u8));
     return;
   }
   const downloads = window.claude && typeof window.claude.use === 'function' ? await window.claude.use('downloads') : null;
   if (downloads) {
-    try { await downloads.save({ filename, data: new Blob([u8], { type: mime }) }); toast('Excel 已儲存'); }
+    try { await downloads.save({ filename, data: new Blob([u8], { type: mime }) }); markBackup(); toast('Excel 已儲存'); }
     catch (e) { if (e && e.code !== 'declined') toast('無法儲存檔案，請稍後再試'); }
     return;
   }
@@ -2927,6 +2955,8 @@ async function saveBinary(filename, u8, mime) {
   a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  markBackup();
+  if (curTab === 'settings') renderSettings();
   toast('Excel 已下載');
 }
 async function exportExcel(keys) {
@@ -3275,13 +3305,14 @@ async function exportData() {
   const text = JSON.stringify(state, null, 1);
   const d = new Date();
   const filename = `薪資備份_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
-  if (window.AndroidBridge) {            // 手機 App：交給系統的「儲存檔案」畫面
+  if (window.AndroidBridge) {            // 手機 App：交給系統的「儲存檔案」畫面（存好後 onAndroidSaved 記下時間）
+    backupPending = true;
     window.AndroidBridge.saveFile(filename, text);
     return;
   }
   const downloads = window.claude && typeof window.claude.use === 'function' ? await window.claude.use('downloads') : null;
   if (downloads) {
-    try { await downloads.save({ filename, data: text }); toast('備份檔已儲存'); }
+    try { await downloads.save({ filename, data: text }); markBackup(); toast('備份檔已儲存'); }
     catch (e) { if (e && e.code !== 'declined') toast('無法儲存檔案，請稍後再試'); }
     return;
   }
@@ -3290,10 +3321,17 @@ async function exportData() {
   a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  markBackup();
+  if (curTab === 'settings') renderSettings();
   toast('備份檔已下載');
 }
 // 手機 App 存檔完成後由 App 呼叫
-window.onAndroidSaved = ok => toast(ok ? '檔案已儲存' : '沒有儲存檔案');
+let backupPending = false;
+window.onAndroidSaved = ok => {
+  if (ok && backupPending) { markBackup(); if (curTab === 'settings') renderSettings(); }
+  backupPending = false;
+  toast(ok ? '檔案已儲存' : '沒有儲存檔案');
+};
 // 手機 App 在背景下載好新版後呼叫
 // 手機 App 在背景下載好新版後呼叫：馬上換成新版（重新載入，資料都在手機裡不受影響）。
 // 正在掃描、確認畫面開著、打字中或有詢問視窗時先等，用完再換。
@@ -3368,6 +3406,8 @@ if (!window.AndroidBridge && /^(esono1\.github\.io|localhost)$/.test(location.ho
     if (!document.querySelector('#sheet:not([hidden])') && !live) location.reload();
   }).catch(() => { /* 裝不了就單核心 */ });
 }
+// 網頁版：請瀏覽器把資料標成「保存」，空間不夠或很久沒開時不要自動清掉（瀏覽器不支援就算了）
+if (!window.AndroidBridge && !window.claude && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 // 剛自動換成新版：告訴使用者
 try {
   const from = sessionStorage.getItem('salary-just-updated');
