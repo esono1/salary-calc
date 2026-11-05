@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.05.32">
+<meta name="salary-page-version" content="2026.11.05.33">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -787,6 +787,7 @@ function dayCalc(svcs, day, high) {
     if (day.night) pay += state.rules.nightPay;
     if (day.typhoon) pay += state.rules.typhoonPay;
     pay += toNum(day.a12);
+    pay += toNum(day.dot) * state.rules.doterraPay;   // 多特瑞含在每日實抽（使用者 2026-11-05；原 Excel 的每日實抽沒有含）
   }
   return { count, net: count - toNum(day && day.ded), lp: r6(lp), perf, pay };
 }
@@ -1077,6 +1078,9 @@ document.addEventListener('change', e => {
     if ((f === 'night' || f === 'a12') && day.nightAuto) day.nightAuto = false;   // 手動改了就不再自動算
     if (f === 'typhoon') { delete day.nightAuto; applyNight(curKey, selDay); }    // 颱風假：先回到預設（不算），之後仍可手動改
     cleanupDay(curKey, selDay); save(); renderDaily();
+  } else if (el.dataset.si != null && scanDraft) {     // 確認畫面改選項目：品名跟著換
+    const it = scanDraft.items[+el.dataset.si], t = document.querySelector(`[data-sraw="${el.dataset.si}"]`);
+    if (it && t) t.textContent = printedName(it.raw, el.value) || it.raw || '（沒讀到品名）';
   } else if (el.dataset.mfield) {
     monthField(el);
   } else if (el.dataset.sfield) {
@@ -1836,7 +1840,7 @@ function openScanSheet(p) {
     <div class="field" style="margin-top:10px"><label>項目</label>
       ${p.items.length ? p.items.map((it, i) => `
         <div class="scan-item">
-          <div class="scan-raw">${esc(it.raw || '（沒讀到品名）')}${(p.pendingItems || []).includes(i) ? '<b class="unsure">（未確認）</b>' : ''}</div>
+          <div class="scan-raw"><span data-sraw="${i}">${esc(printedName(it.raw, it.svc) || it.raw || '（沒讀到品名）')}</span>${(p.pendingItems || []).includes(i) ? '<b class="unsure">（未確認）</b>' : ''}</div>
           <div class="scan-pick"><select data-si="${i}" aria-label="${esc(it.raw)} 對應的項目"><option value="">（不加入）</option>${opts(it.svc)}</select>
           <input type="number" inputmode="numeric" min="0" data-sq="${i}" value="${it.qty}" aria-label="張數"></div>
         </div>`).join('') : '<p class="note" style="margin:0">沒有辨識到品項，請重拍一張清楚、平整的照片。</p>'}
@@ -1850,6 +1854,18 @@ function openScanSheet(p) {
       ${lastScanSrc ? `<button class="btn primary" id="scanAddNext"${p.items.length ? '' : ' disabled'}>${prev ? '取代' : '加入'}，${lastScanSrc === 'paste' ? '貼' : '掃'}下一張</button>` : ''}
     </div>`;
   $('#sheet').hidden = false;
+}
+// 確認畫面的品名：對到項目就顯示單上印的完整品名（「多特青油」→「多特瑞精油」、「指/油安摩90分」→「指/油壓按摩90分」），
+// 對不到才顯示辨識原文（原文都還在「辨識到的文字」裡）
+function printedName(raw, svc) {
+  const sname = svc === DOT ? DOT : (state.services.find(s => s.id === svc) || {}).name;
+  if (!sname) return '';
+  const cands = SLIP_NAMES.map(([st, opts], i) => ({ st, i, min: Object.keys(opts).find(m => opts[m] === sname) })).filter(c => c.min != null);
+  if (!cands.length) return '';
+  // 同一個項目有兩種印法（肩/刮30：足浴+肩頸、刮痧服務），挑跟讀到的字最像的
+  const s = normSlipName(raw || '').replace(/[\d０-９分XxＸ×]/g, '');
+  const c = cands.sort((a, b) => levenshtein(s, a.st) - levenshtein(s, b.st))[0];
+  return c.st + (+c.min ? c.min + (c.st === '足底經絡套餐' ? '' : '分') : '');   // 單上印「足底經絡套餐100」（沒有「分」）
 }
 // 每天記下每張工作單加了什麼（day.slipLog[編號] = { kind, items: [{ id, qty }] }），
 // 同編號再掃一次（例如重印）就把舊的扣掉、改用新的
