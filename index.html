@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.05.33">
+<meta name="salary-page-version" content="2026.11.05.34">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1114,6 +1114,19 @@ function leaveCard(k, c) {
   const btn = app && link ? '<div class="btns" style="margin-top:8px"><button class="btn sm" data-act="leave">從休假表更新</button></div>' : '';
   return `<div class="card"><h2>休假與請假<span class="hint">休假表</span></h2>${body}${btn}</div>`;
 }
+// 遲到統計：每天在每日登錄填的遲到分鐘，列出日期、次數、合計，以及對激勵獎金的影響
+function lateCard(k, c) {
+  const m = state.months[k], R = state.rules, { y, m: mm } = parseYM(k);
+  const days = Object.keys((m && m.days) || {}).map(Number).filter(d => toNum(m.days[d].late) > 0).sort((a, b) => a - b);
+  const left = R.lateLimit - c.late;
+  const effect = c.late < R.lateLimit ? `未達 ${R.lateLimit} 分鐘，激勵獎金照發（還差 ${fix(left, 1)} 分鐘）` : `已達 ${R.lateLimit} 分鐘，不發激勵獎金`;
+  const body = days.length ? `<div class="rows">
+      ${days.map(d => `<div class="row"><div class="k">${mm}/${d}（${WD[new Date(y, mm - 1, d).getDay()]}）</div><div class="v">${fix(toNum(m.days[d].late), 1)} 分</div></div>`).join('')}
+      <div class="row total"><div class="k">合計<small${c.late < R.lateLimit ? '' : ' style="color:var(--danger)"'}>${effect}</small></div><div class="v${c.late < R.lateLimit ? '' : ' neg'}">${fix(c.late, 1)} 分</div></div>
+    </div>`
+    : `<p class="note" style="margin:0">本月沒有遲到紀錄（在每日登錄填「遲到（分鐘）」）。</p>`;
+  return `<div class="card"><h2>遲到統計<span class="hint">${days.length ? `${days.length} 次・合計 ${fix(c.late, 1)} 分鐘` : '0 次'}</span></h2>${body}</div>`;
+}
 // 打開月結算、或從別的 App 切回來時重讀休假表；同一個月份一分鐘內不重複讀
 // （假表系統有流量上限，網站本身也快取 60 秒，再快讀到的也是同一份）
 const LEAVE_MIN_GAP = 60 * 1000;
@@ -1187,6 +1200,8 @@ function renderMonth() {
     </div>
 
     ${leaveCard(k, c)}
+
+    ${lateCard(k, c)}
 
     <div class="card">
       <h2>獎金與津貼<span class="hint">年資 ${fix(c.sen, 1)} 個月 · 乘數 ${c.tier.mult}</span></h2>
