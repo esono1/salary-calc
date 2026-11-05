@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.05.34">
+<meta name="salary-page-version" content="2026.11.06.35">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -242,6 +242,10 @@ td.zero { color: var(--muted); opacity: .6; }
 .chk input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; }
 .svc-nums { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding-left: 34px; }   /* 讓出左邊的拖曳把手 */
 .svc-nums.head { font-size: 11.5px; color: var(--muted); }
+@media (max-width: 400px) {   /* 小螢幕：第 2 欄（時數係數，像 0.66625）放寬，價錢欄 4 位數也放得下 */
+  .svc-nums { gap: 4px; padding-left: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .svc-nums input { padding: 6px 4px; }
+}
 .svc-list { position: relative; }
 .svc-item { background: var(--surface); }
 .grip { width: 28px; height: 36px; margin-left: -2px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; color: var(--muted);
@@ -341,6 +345,9 @@ details.more[open] > summary::before { content: "▾ "; }
 .slip-time small, .slip-items small { font-size: 11.5px; color: var(--muted); font-weight: 400; }
 .slip-items { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .scan-text { white-space: pre-wrap; font-size: 12px; color: var(--muted); background: var(--surface-2); border-radius: 8px; padding: 8px; margin: 6px 0 0; }
+.slip-items .it { white-space: nowrap; }   /* 一個項目「足60 ×1」不要從中間斷行 */
+/* 手機：輸入框字小於 16px 時，iPhone 點下去會自動放大整個畫面（而且不會縮回來），看起來像跑版 */
+@media (pointer: coarse) { input:not([type=checkbox]):not([type=radio]), select, textarea { font-size: 16px !important; } }
 </style>
 </head>
 <body>
@@ -962,7 +969,7 @@ function renderDaily() {
       ${slips.map(s => `<div class="slip-row">
         <span class="slip-time">${esc(s.time || '--:--')}${lateSlip(s.time) ? '<small>凌晨</small>' : ''}</span>
         <span class="tag k${s.kind}">${KINDS[s.kind].mark}</span>
-        <span class="slip-items">${esc(slipText(s, k))}
+        <span class="slip-items"><span>${slipText(s, k).split('、').map(t => `<span class="it">${esc(t)}</span>`).join('、')}</span>
           <small>${s.no || /^x/.test(s.key) ? '' : '編號 ' + esc(s.key)}${s.no ? '編號 ' + esc(s.no) : ''}${s.ded ? `・扣人頭 ${s.ded}` : ''}${s.date && s.date !== thisDate ? `・單上日期 ${+s.date.slice(5, 7)}/${+s.date.slice(8)}` : ''}</small></span>
         <button class="btn sm" data-slipdel="${esc(s.key)}" aria-label="刪除 ${esc(s.time || '')} 這張工作單">刪除</button>
       </div>`).join('')}
@@ -1344,7 +1351,7 @@ function renderSettings() {
   const shownCount = state.services.filter(s => !s.hidden).length;
   const tiers = R.tiers.map((t, i) => `
     <div class="svc-edit" style="grid-template-columns: repeat(3, minmax(0,1fr))">
-      ${t.under == null ? `<input value="${R.tiers[i - 1] ? R.tiers[i - 1].under : 0} 個月以上" disabled>` : `<input type="number" data-sfield="tier.under" data-i="${i}" value="${t.under}" aria-label="未滿月數">`}
+      ${t.under == null ? `<input value="${R.tiers[i - 1] ? R.tiers[i - 1].under : 0} 以上" disabled aria-label="${R.tiers[i - 1] ? R.tiers[i - 1].under : 0} 個月以上">` : `<input type="number" data-sfield="tier.under" data-i="${i}" value="${t.under}" aria-label="未滿月數">`}
       <input type="number" data-sfield="tier.mult" data-i="${i}" value="${t.mult}" aria-label="勞點乘數">
       <input type="number" data-sfield="tier.tenure" data-i="${i}" value="${t.tenure}" aria-label="久任津貼">
     </div>`).join('');
