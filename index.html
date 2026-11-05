@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.03.31">
+<meta name="salary-page-version" content="2026.11.05.32">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -961,7 +961,7 @@ function renderDaily() {
       ${slips.map(s => `<div class="slip-row">
         <span class="slip-time">${esc(s.time || '--:--')}${lateSlip(s.time) ? '<small>凌晨</small>' : ''}</span>
         <span class="tag k${s.kind}">${KINDS[s.kind].mark}</span>
-        <span class="slip-items">${esc(s.items.map(x => `${(state.services.find(v => v.id === x.id) || {}).name || '?'} ×${x.qty}`).join('、'))}
+        <span class="slip-items">${esc(slipText(s, k))}
           <small>${s.no || /^x/.test(s.key) ? '' : '編號 ' + esc(s.key)}${s.no ? '編號 ' + esc(s.no) : ''}${s.ded ? `・扣人頭 ${s.ded}` : ''}${s.date && s.date !== thisDate ? `・單上日期 ${+s.date.slice(5, 7)}/${+s.date.slice(8)}` : ''}</small></span>
         <button class="btn sm" data-slipdel="${esc(s.key)}" aria-label="刪除 ${esc(s.time || '')} 這張工作單">刪除</button>
       </div>`).join('')}
@@ -1037,9 +1037,10 @@ document.addEventListener('click', async e => {
   }
   if (t.dataset.slipdel != null) {
     const day = getDay(curKey, selDay), key = t.dataset.slipdel, log = day && day.slipLog && day.slipLog[key];
-    if (log && await ask(`刪除這張工作單（${slipSummary(log)}）？會一起扣掉它加的張數。`, '刪除', true)) {
+    if (log && await ask(`刪除這張工作單（${slipSummary(log, curKey)}）？會一起扣掉它加的張數。`, '刪除', true)) {
       for (const x of log.items) { const c = day.c[x.id]; if (c) c[log.kind] = Math.max(0, c[log.kind] - x.qty); }
       if (log.ded) day.ded = Math.max(0, toNum(day.ded) - log.ded) || '';   // 這張單自動扣的人頭也還回去
+      if (log.dot) day.dot = Math.max(0, toNum(day.dot) - log.dot) || '';   // 這張單加的多特瑞也扣回去
       delete day.slipLog[key];
       applyNight(curKey, selDay);
       cleanupDay(curKey, selDay); save(); renderDaily(); toast('已刪除');
@@ -1625,6 +1626,8 @@ function slipRows(result) {
 // 工作單上印的品名（POS 的商品名稱，2026-11 店內全部 23 個）→ 依分鐘數對到 App 的項目。
 // 讀到的字跟這些比，最像的那個（讀錯一兩個字也行）就是它；分鐘數用來分開長得像的（足浴+肩頸 30 分／足蒸+肩頸 40 分）。
 // 店裡新增或改名的品項加在這裡
+// 工作單上的「多特瑞精油 X 1」：不是勞作項目（不算張數、不算一位客人），選單和紀錄裡用這個代號
+const DOT = '__dot';
 const SLIP_NAMES = [
   ['足底按摩', { 30: '足30', 60: '足60', 90: '足90' }],
   ['足底經絡套餐', { 100: '足體100' }],                 // 單上印「足底經絡套餐100」（沒有「分」）
@@ -1643,7 +1646,10 @@ const SLIP_NAMES = [
   ['直購足蒸', { 40: '直購足蒸' }],
   ['加購足蒸', { 40: '加購足蒸' }],
   ['足蒸+肩頸', { 40: '足蒸+肩' }],
+  ['多特瑞精油', { 0: DOT }],                          // 不是項目：掃到就記在當天的「多特瑞（次）」
 ];
+const DOT_I = SLIP_NAMES.findIndex(([, o]) => o[0] === DOT);
+const DOT_RE = /多特|特瑞|瑞精|精油/;
 const levenshtein = (a, b) => {
   const d = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i++) {
@@ -1666,6 +1672,7 @@ function nameMatch(raw) {
 function nameService(i, min) {
   const opts = SLIP_NAMES[i][1], keys = Object.keys(opts);
   const n = opts[min] || (keys.length === 1 ? opts[keys[0]] : null);
+  if (n === DOT) return DOT;
   return n ? (state.services.find(s => s.name === n) || {}).id || null : null;
 }
 // 依品項名稱猜 App 的項目：例如「足底按摩60分」→ 足60、「足浴+肩頸30分」→ 肩/刮30
@@ -1680,6 +1687,7 @@ function guessService(raw) {
   // 店內品名：品名對到之後配上分鐘數（「605}」這種讀錯的數字也會換算）
   const nm = nameMatch(name);
   if (nm) { const id = nameService(nm.i, slotMin(name)); if (id) return id; }
+  if (DOT_RE.test(name)) return DOT;                     // 多特瑞精油讀錯幾個字
   if (has(/足蒸|足浴蒸/) && has(/肩/)) return byName('足蒸+肩');
   if (has(/加購.*足蒸/)) return byName('加購足蒸');
   if (has(/足蒸/)) return byName('直購足蒸');
@@ -1707,7 +1715,7 @@ function slotMin(raw) {
 // （「足浴+肩頸」只要讀到 浴、+、肩、頸 任一個就是肩/刮；足蒸類交給整行比對）
 const slotCatGuess = raw => (([['蒸', /蒸/], ['肩', /[肩刮頸頚颈浴+]/], ['足體', /套餐|足.*[體身]/], ['體', /[體身油]|指\s*\//], ['足', /[足腳底]/]]
   .find(([, re]) => re.test(raw)) || [])[0]) || '';
-const slotCat = raw => { const nm = nameMatch(raw); return nm ? 'N' + nm.i : slotCatGuess(raw); };
+const slotCat = raw => { if (DOT_RE.test(raw)) return 'N' + DOT_I; const nm = nameMatch(raw); return nm ? 'N' + nm.i : slotCatGuess(raw); };
 // 品名線索＋分鐘數 → 項目
 const partsService = (ct, mn) => ct[0] === 'N' ? nameService(+ct.slice(1), mn) : guessService(ct + mn + '分');
 // 解析辨識結果：日期（民國年）、時間、編號、種類（勞點／支援標記）、品項與數量
@@ -1740,8 +1748,9 @@ function parseSlip(result) {
   // 日期那一列以下才是品項區（包廂那列常讀成「包箱:101」之類，不能算品項）；
   // 品項區的字常讀成亂碼（沒有中文），只要後面有「X 1」也算一個品項
   const headIdx = rows.findIndex(r => /\d{3,4}\s*-+\s*\d{1,2}\s*-+\s*\d{1,2}|會員/.test(r));
-  const isName = (t, loose) => !head.test(t) && (loose ? /[一-鿿]|\d{2,3}\s*[分}%\])]/.test(t) && /\d{2,3}/.test(t)
-    : /[一-鿿]{2}/.test(t) && /\d{2,3}|\d(?:\.\d)?\s*[Hh小]/.test(t));
+  // 多特瑞精油沒有分鐘數，有這幾個字就算一行品項
+  const isName = (t, loose) => !head.test(t) && (DOT_RE.test(t) || (loose ? /[一-鿿]|\d{2,3}\s*[分}%\])]/.test(t) && /\d{2,3}/.test(t)
+    : /[一-鿿]{2}/.test(t) && /\d{2,3}|\d(?:\.\d)?\s*[Hh小]/.test(t)));
   const pair = () => { while (names.length && qtys.length) push(names.shift(), qtys.shift()); };
   rows.forEach((r, ri) => {
     if (ri <= headIdx) return;
@@ -1809,12 +1818,13 @@ let scanDraft = null;
 const KIND_LABELS = ['△ 勞點', 'ⴸ 一般', '○ 支援'];
 function openScanSheet(p) {
   scanDraft = p;
-  const opts = sel => state.services.map(s => `<option value="${s.id}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}${s.hidden ? '（未顯示）' : ''}</option>`).join('');
+  const opts = sel => state.services.map(s => `<option value="${s.id}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}${s.hidden ? '（未顯示）' : ''}</option>`).join('')
+    + `<option value="${DOT}"${sel === DOT ? ' selected' : ''}>多特瑞（次）</option>`;
   const work = p.dateGuessed ? p.date : slipWorkDate(p.date, p.time);
   const prev = work && p.no ? slipRecorded(work, slipKey(p.dateGuessed ? '' : p.date, work, p.no)) : null;
   $('#sheetBody').innerHTML = `
     <h2>確認工作單</h2>
-    ${prev ? `<p class="warn">這張單（編號 ${esc(p.no)}）${+work.slice(5, 7)}/${+work.slice(8)} 已經記過：${esc(slipSummary(prev))}。按「取代」會刪掉舊的內容，改用這次掃描的內容。</p>` : ''}
+    ${prev ? `<p class="warn">這張單（編號 ${esc(p.no)}）${+work.slice(5, 7)}/${+work.slice(8)} 已經記過：${esc(slipSummary(prev, work.slice(0, 7)))}。按「取代」會刪掉舊的內容，改用這次掃描的內容。</p>` : ''}
     ${p.unsure && p.unsure.length ? `<p class="warn">還沒全部確認（${esc(p.unsure.join('、'))}），下面是目前讀到的內容，請檢查後再加入。</p>` : ''}
     ${work !== p.date ? `<p class="note" style="margin-top:0">凌晨 4 點前的單算前一天（單上印的是 ${+p.date.slice(5, 7)}/${+p.date.slice(8)}）。</p>` : ''}
     <div class="grid2">
@@ -1847,7 +1857,10 @@ function slipRecorded(date, key) {
   const k = date.slice(0, 7), d = +date.slice(8), m = state.months[k];
   return (m && m.days[d] && m.days[d].slipLog && m.days[d].slipLog[key]) || null;
 }
-const slipSummary = log => log.items.map(x => `${(state.services.find(s => s.id === x.id) || {}).name || '?'} ×${x.qty}`).join('、') + `（${KIND_LABELS[log.kind].slice(2)}）`;
+// 項目名稱：紀錄裡的 id 是該月的（Excel 匯入的月份是 s0、s1…），先找該月、再找設定
+const svcLabel = (id, k) => id === DOT ? '多特瑞' : ((k && monthServices(k).find(s => s.id === id)) || state.services.find(s => s.id === id) || {}).name || '?';
+const slipText = (log, k) => log.items.map(x => `${svcLabel(x.id, k)} ×${x.qty}`).concat(log.dot ? [`多特瑞 ×${log.dot}`] : []).join('、');
+const slipSummary = (log, k) => slipText(log, k) + `（${KIND_LABELS[log.kind].slice(2)}）`;
 // 關掉確認畫面：留著的相機 1.5 秒後關（「掃下一張／重新掃描」會在這之前重新用到它）
 function closeScanSheet() { $('#sheet').hidden = true; scanDraft = null; WebScanner.releaseSoon(); }
 function addScan() {
@@ -1856,17 +1869,21 @@ function addScan() {
   const k = date.slice(0, 7), d = +date.slice(8);
   const day = getDay(k, d, true), m = state.months[k];
   // 選單是設定裡的項目（pref）；記到該月時要用該月同一個項目的 id，不然月明細會多出一列同名的
-  const picks = p.items.map((it, i) => ({ it, pref: document.querySelector(`[data-si="${i}"]`).value, qty: toNum(document.querySelector(`[data-sq="${i}"]`).value) }))
-    .filter(x => x.pref && x.qty > 0).map(x => Object.assign(x, { id: monthSvcId(k, x.pref) }));
-  if (!picks.length) { toast('沒有要加入的項目'); cleanupDay(k, d); return; }
+  const all = p.items.map((it, i) => ({ it, pref: document.querySelector(`[data-si="${i}"]`).value, qty: toNum(document.querySelector(`[data-sq="${i}"]`).value) }))
+    .filter(x => x.pref && x.qty > 0);
+  // 多特瑞精油：不是項目，記在當天的「多特瑞（次）」
+  const dotQty = all.filter(x => x.pref === DOT).reduce((a, x) => a + x.qty, 0);
+  const picks = all.filter(x => x.pref !== DOT).map(x => Object.assign(x, { id: monthSvcId(k, x.pref) }));
+  if (!picks.length && !dotQty) { toast('沒有要加入的項目'); cleanupDay(k, d); return; }
   state.slipMap = state.slipMap || {};
   const key = slipKey(p.dateGuessed ? '' : p.date, date, p.no);
   const prev = p.no ? slipRecorded(date, key) : null;
-  if (prev) {                                           // 同編號：先把舊的那張扣掉（張數和扣人頭）
+  if (prev) {                                           // 同編號：先把舊的那張扣掉（張數、扣人頭、多特瑞）
     for (const x of prev.items) { const c = day.c[x.id]; if (c) c[prev.kind] = Math.max(0, c[prev.kind] - x.qty); }
     day.ded = Math.max(0, toNum(day.ded) - toNum(prev.ded)) || '';
+    if (prev.dot) day.dot = Math.max(0, toNum(day.dot) - prev.dot) || '';
   }
-  // 一張單是一位客人：多個項目、或同項目 X2 以上，多出來的自動扣人頭（總數量 − 1）
+  // 一張單是一位客人：多個項目、或同項目 X2 以上，多出來的自動扣人頭（總數量 − 1；多特瑞不算）
   const ded = Math.max(0, picks.reduce((a, x) => a + x.qty, 0) - 1);
   if (ded) day.ded = toNum(day.ded) + ded;
   const added = [];
@@ -1878,8 +1895,9 @@ function addScan() {
     if ((it.raw.match(/[一-鿿]/g) || []).length >= 2 && it.raw.length >= 4) state.slipMap[it.raw] = pref;
     added.push(`${(state.services.find(s => s.id === pref) || {}).name} ×${qty}`);
   }
+  if (dotQty) { day.dot = toNum(day.dot) + dotQty; added.push(`多特瑞 ×${dotQty}`); }
   day.slipLog = Object.assign(day.slipLog || {}, { [key]: { kind: p.kind, items: picks.map(x => ({ id: x.id, qty: x.qty })),
-    time: p.time || '', no: p.no || '', date: p.dateGuessed ? '' : p.date || '', ...(ded ? { ded } : {}) } });
+    time: p.time || '', no: p.no || '', date: p.dateGuessed ? '' : p.date || '', ...(ded ? { ded } : {}), ...(dotQty ? { dot: dotQty } : {}) } });
   applyNight(k, d);
   cleanupDay(k, d); save();
   autoLeave(k);                                       // 順便更新假表（判斷晚班日），一分鐘最多一次
@@ -2057,7 +2075,7 @@ window.onSlipFrame = json => {
   const missing = [dn < 2 && '日期', tn < 2 && '時間', nn < 2 && '編號', !count && '品項',
     ...pending.map(i => `第 ${i + 1} 項`), extra && live.n < live.waitN && '是否還有其他品項'].filter(Boolean);
   const done = !missing.length && live.n >= live.minN;
-  const names = best.items.map((it, i) => (pending.includes(i) ? '？' : '') + ((state.services.find(s => s.id === it.svc) || {}).name || it.raw) + ' ×' + it.qty).join('、');
+  const names = best.items.map((it, i) => (pending.includes(i) ? '？' : '') + (it.svc ? svcLabel(it.svc) : it.raw) + ' ×' + it.qty).join('、');
   liveHint([[date && `${+date.slice(5, 7)}/${+date.slice(8)}`, time, no && '編號 ' + no, KIND_LABELS[kind].slice(2)].filter(Boolean).join('　'), names,
     done ? '' : missing.length ? '還在確認：' + missing.join('、') + '，請拿穩…' : '讀取中，請拿穩…'].filter(Boolean).join('\n'));
   // 記下目前讀到的：使用者按「關閉」時用這份帶入（標示還沒確認的部分）
