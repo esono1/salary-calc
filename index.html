@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.07.37">
+<meta name="salary-page-version" content="2026.11.07.38">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2160,7 +2160,18 @@ const SlipOcr = (() => {
   const MODELS = 'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.4.2/assets/';
   const FILES = [[ORT + 'ort-wasm-simd-threaded.wasm', 14.85], [MODELS + 'ch_PP-OCRv4_det_infer.onnx', 4.75], [MODELS + 'ch_PP-OCRv4_rec_infer.onnx', 10.82]];
   const TOTAL = FILES.reduce((a, f) => a + f[1], 0);
-  let det = null, rec = null, keys = null, loading = null;
+  let det = null, rec = null, keys = null, allowed = null, loading = null;
+  // 只認工作單上會出現的字（店內品名、表頭、標記、付款、數字、英文字母、符號；簡體也收，之後 fixOcr 會轉繁體）：
+  // 6600 多個字裡只比這一百多個，像「多特瑞」就不會再讀成「多特青」，亂碼行的分數也會變低被丟掉。
+  // 店裡新增品項只要加進 SLIP_NAMES，這裡會自動跟著認得
+  const SLIP_WORDS = '師傅服務單包廂箱日期編號會員門市指定支援加點重印刷卡現金付款轉帳分小時鐘套餐精油';
+  function slipCharIndexes() {
+    const chars = new Set([...SLIP_WORDS, ...SLIP_NAMES.map(([st]) => st).join(''), ...Object.keys(SIMP), ...Object.values(SIMP).join(''),
+      ...'0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:：-－—()（）+＋/.,，×*#◆♦◇ ']);
+    const idx = [];
+    keys.forEach((k, i) => { if (chars.has(k)) idx.push(i + 1); });   // 輸出第 0 格是「空白（CTC blank）」，字從第 1 格開始
+    return Int32Array.from(idx);
+  }
   const loadScript = src => new Promise((ok, bad) => { const s = document.createElement('script'); s.crossOrigin = 'anonymous'; s.src = src; s.onload = ok; s.onerror = () => bad(new Error(src)); document.head.appendChild(s); });
   // 下載（有存過就直接用瀏覽器裡的那份）；progress(已下載 MB, 全部 MB)
   async function getFile(url, done, progress) {
@@ -2193,6 +2204,7 @@ const SlipOcr = (() => {
       keys = new TextDecoder().decode(await getFile(MODELS + 'ppocr_keys_v1.txt', done)).split(/\r?\n/);
       if (keys[keys.length - 1] === '') keys.pop();
       keys.push(' ');
+      allowed = slipCharIndexes();
     })().catch(e => { loading = null; throw e; });
     return loading;
   }
@@ -2238,8 +2250,10 @@ const SlipOcr = (() => {
     const [, T, C] = out.dims, d = out.data;
     let t = '', last = 0, score = 0, cnt = 0;
     for (let i = 0; i < T; i++) {
-      let best = 0, bv = -1;
-      for (let j = 0; j < C; j++) { const v = d[i * C + j]; if (v > bv) { bv = v; best = j; } }
+      const o = i * C;
+      let best = 0, bv = d[o];
+      if (allowed) { for (let a = 0; a < allowed.length; a++) { const j = allowed[a], v = d[o + j]; if (v > bv) { bv = v; best = j; } } }
+      else for (let j = 1; j < C; j++) { const v = d[o + j]; if (v > bv) { bv = v; best = j; } }
       if (best && best !== last) { t += keys[best - 1] || ''; score += bv; cnt++; }
       last = best;
     }
@@ -2263,10 +2277,17 @@ const SlipOcr = (() => {
     const nextY = Math.min(...boxes.filter(b => b !== top).map(b => b.y));
     return cx > 0.3 && cx < 0.7 && top.w < sw * 0.6 && top.y + top.h * 0.8 < nextY ? boxes.filter(b => b !== top) : boxes;
   }
+  // 虛線分隔線（品項上下那幾條）也會被當成一行字，讀出來是「#####」；它又長又扁、而且比一般小字矮，
+  // 是最花時間的幾行之一：先跳過（日期那列一樣長，但跟一般小字一樣高，不會被跳過）
+  function dropRules(boxes) {
+    if (boxes.length < 5) return boxes;
+    const hs = boxes.map(b => b.h).sort((a, b) => a - b), base = hs[Math.floor(hs.length / 4)];
+    return boxes.filter(b => !(b.w / b.h > 9 && b.h < base * 0.8));
+  }
   async function recognize(src, sw, sh, maxSide = 960, opts = {}) {
     await init();
     const t0 = performance.now();
-    let boxes = dropTitle(await detect(src, sw, sh, maxSide), sw), itemsTop = null;
+    let boxes = dropRules(dropTitle(await detect(src, sw, sh, maxSide), sw)), itemsTop = null;
     const t1 = performance.now();
     if (opts.itemsOnly) { const r = itemBoxes(boxes, sw); if (r) { boxes = r.items; itemsTop = r.top; } }
     const lines = [];
