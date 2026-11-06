@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.06.36">
+<meta name="salary-page-version" content="2026.11.07.37">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2972,6 +2972,7 @@ async function exportExcel(keys) {
 // 75 筆請假標示與休假日全部相同。假表系統改了扣款規則，這裡要跟著換。
 // 2026-11-03 再同步一次：生理假（佔每日名額、不排順位、不會 -1000）、銷假 leaveCancels（整天銷假的 R 變 cancelled、
 // 空出抽籤名額）、請假可只請一段時間（標籤「請N 18-22」，空格後是時段）。
+// 2026-11-07 再同步：時段可以到分鐘（存「18:30」），顯示省略冒號（_hrsOf：「銷1830-22」「請1 1430-18」）。
 function leaveTableRules(data) {
 // 請假改成送出就生效（不用審核）：舊的「待審核」一律視為已生效（同假表系統的 migrateData）
 (data.extraLeaves||[]).forEach(l=>{ if(l.status==='pending') l.status='approved'; });
@@ -3028,7 +3029,7 @@ function getBirthdayCount(period,shift,d,gender){
 }
 const R_ST=['lottery','direct'];
 function _cancelOf(pid,empId,date){ return (data.leaveCancels||[]).find(c=>c.periodId===pid&&c.empId===empId&&c.date===date)||null; }
-const _hrsOf=x=>x&&x.start&&x.end?`${x.start}-${x.end}`:'';
+const _hrsOf=x=>x&&x.start&&x.end?`${String(x.start).replace(':','')}-${String(x.end).replace(':','')}`:'';
 function _hWinCount(p,h){
   const ws=h.winners||[];
   if(!(data.leaveCancels||[]).some(c=>c.periodId===p.id&&c.date===h.date&&!c.start)) return ws.length;
@@ -3245,7 +3246,7 @@ function leaveSummary(payload, code, k) {
       const pending = l.status === 'pending';
       const counted = !pending && !LEAVE_NOT_COUNTED.has(kind);
       const minus1000 = !pending && kind === '請假' && rules.extraLeaveLabel(emp.id, l.date).split(' ')[0].endsWith('-1000');
-      const hours = l.start && l.end ? `${l.start}-${l.end}` : '';
+      const hours = rules._hrsOf(l);                     // 跟假表一樣省略冒號：18:30-22 → 1830-22
       return { date: l.date, kind, counted, minus1000, pending, ...(hours ? { hours } : {}) };
     });
   // 晚班日：假表上有填色的日子（期別設定的假日；沒設定時六、日是假日），而且自己假日的下班時間過了半夜（例如 02:00）
