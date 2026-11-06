@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.07.39">
+<meta name="salary-page-version" content="2026.11.07.40">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -3377,6 +3377,22 @@ window.onAndroidUpdate = ver => {
   tryApplyUpdate();
 };
 function pageVersion() { const m = document.querySelector('meta[name="salary-page-version"]'); return m ? m.content : ''; }
+// 網頁版：開著的時候（打開後、回到畫面時，最多 5 分鐘一次）看網站上有沒有新版，有就跟 App 一樣找空檔重新載入。
+// 同一個新版本只重新載入一次，萬一拿到的還是舊的也不會一直重整
+let webCheckAt = 0;
+async function checkWebUpdate() {
+  if (window.AndroidBridge || window.claude || !/^(esono1\.github\.io|localhost)$/.test(location.hostname)) return;
+  if (Date.now() - webCheckAt < 5 * 60 * 1000) return;
+  webCheckAt = Date.now();
+  try {
+    const t = await (await fetch(location.pathname, { cache: 'no-cache' })).text();
+    const v = (/name="salary-page-version" content="([^"]+)"/.exec(t) || [])[1];
+    if (!v || !versionLess(pageVersion(), v)) return;
+    try { if (sessionStorage.getItem('salary-web-upd') === v) return; sessionStorage.setItem('salary-web-upd', v); } catch (e) { return; }
+    updatePending = true; tryApplyUpdate();
+  } catch (e) { /* 沒網路就下次再看 */ }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkWebUpdate(); });
 
 $('#importFile').addEventListener('change', async e => {
   const file = e.target.files[0]; e.target.value = '';
@@ -3440,6 +3456,7 @@ try {
 } catch (e) { /* 沒有也沒關係 */ }
 // 網頁版：開啟 2 秒後在背景先準備辨識元件（下載過才準備），按「掃描工作單」就能馬上開始讀
 if (webScan()) setTimeout(() => { if (!live) SlipOcr.preload(); }, 2000);
+setTimeout(checkWebUpdate, 4000);
 </script>
 </body>
 </html>
