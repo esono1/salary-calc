@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.07.38">
+<meta name="salary-page-version" content="2026.11.07.39">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2050,7 +2050,7 @@ window.onSlipImage = async (dataUrl, info) => {
   try {
     if (!live) return;
     const img = new Image(); img.src = dataUrl; await img.decode();
-    const r = await SlipOcr.recognize(img, img.naturalWidth, img.naturalHeight, 800, { itemsOnly: liveItemsOnly() });
+    const r = await SlipOcr.recognize(img, img.naturalWidth, img.naturalHeight, LIVE_DET_SIDE, { itemsOnly: liveItemsOnly() });
     r.info = info + (r.itemsOnly ? '，只讀品項' : '') + `，找字 ${r.ms.det}ms＋讀 ${r.ms.n} 行 ${r.ms.rec}ms`;
     if (live) window.onSlipFrame(JSON.stringify(r));
   } catch (e) { /* 這格讀不到就換下一格 */ }
@@ -2155,6 +2155,9 @@ window.onSlipFrame = json => {
 /* ---- 網頁版辨識：PaddleOCR（PP-OCRv4）用 onnxruntime-web 在手機瀏覽器裡跑，不上傳照片 ----
    偵測模型找出每一行字的位置 → 辨識模型讀字 → 輸出跟 App 一樣的 { lines: [{ t, x, y, w, h }] }。
    第一次要下載約 30 MB（存在瀏覽器裡，之後不用再下載） */
+// 即時掃描（已裁成導引框）找字用的解析度：2026-11-07 用 4 張真實工作單、模擬手機畫面測過，
+// 800 → 576 找字快將近一半（約 228 → 118 ms，單核心），4 張都照樣讀對（672 反而有一格把 1 讀成 7）
+const LIVE_DET_SIDE = 576;
 const SlipOcr = (() => {
   const ORT = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/';
   const MODELS = 'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.4.2/assets/';
@@ -2471,8 +2474,8 @@ const WebScanner = (() => {
           const c = frameCrop();
           const [src, w, h] = c ? [cropCanvas, c.w, c.h] : [video, video.videoWidth, video.videoHeight];
           if (sharpOk(SlipOcr.sharpness(src, w, h))) {                 // 模糊的畫面不讀
-            // 裁過的字夠大，偵測用 800 就讀得到；表頭確認後只讀品項
-            const r = await SlipOcr.recognize(src, w, h, c ? 800 : 960, { itemsOnly: liveItemsOnly() });
+            // 裁過的字夠大，偵測用 576 就讀得到；表頭確認後只讀品項
+            const r = await SlipOcr.recognize(src, w, h, c ? LIVE_DET_SIDE : 960, { itemsOnly: liveItemsOnly() });
             r.info = `相機 ${video.videoWidth}×${video.videoHeight}${c ? `，辨識範圍 ${c.w}×${c.h}` : ''}${r.itemsOnly ? '，只讀品項' : ''}`
               + `，找字 ${r.ms.det}ms＋讀 ${r.ms.n} 行 ${r.ms.rec}ms${window.crossOriginIsolated ? '，多核心' : '，單核心'}`;
             if (running) window.onSlipFrame(JSON.stringify(r));
