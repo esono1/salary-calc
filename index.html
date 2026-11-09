@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.07.40">
+<meta name="salary-page-version" content="2026.11.10.41">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -346,6 +346,7 @@ details.more[open] > summary::before { content: "▾ "; }
 .slip-items { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .scan-text { white-space: pre-wrap; font-size: 12px; color: var(--muted); background: var(--surface-2); border-radius: 8px; padding: 8px; margin: 6px 0 0; }
 .slip-items .it { white-space: nowrap; }   /* 一個項目「足60 ×1」不要從中間斷行 */
+.slip-btns { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }   /* 編輯／刪除直排，品項才有空間 */
 /* 手機：輸入框字小於 16px 時，iPhone 點下去會自動放大整個畫面（而且不會縮回來），看起來像跑版 */
 @media (pointer: coarse) { input:not([type=checkbox]):not([type=radio]), select, textarea { font-size: 16px !important; } }
 </style>
@@ -992,7 +993,8 @@ function renderDaily() {
         <span class="tag k${s.kind}">${KINDS[s.kind].mark}</span>
         <span class="slip-items"><span>${slipText(s, k).split('、').map(t => `<span class="it">${esc(t)}</span>`).join('、')}</span>
           <small>${s.no || /^x/.test(s.key) ? '' : '編號 ' + esc(s.key)}${s.no ? '編號 ' + esc(s.no) : ''}${s.ded ? `・扣人頭 ${s.ded}` : ''}${s.date && s.date !== thisDate ? `・單上日期 ${+s.date.slice(5, 7)}/${+s.date.slice(8)}` : ''}</small></span>
-        <button class="btn sm" data-slipdel="${esc(s.key)}" aria-label="刪除 ${esc(s.time || '')} 這張工作單">刪除</button>
+        <span class="slip-btns"><button class="btn sm" data-slipedit="${esc(s.key)}" aria-label="編輯 ${esc(s.time || '')} 這張工作單">編輯</button>
+        <button class="btn sm" data-slipdel="${esc(s.key)}" aria-label="刪除 ${esc(s.time || '')} 這張工作單">刪除</button></span>
       </div>`).join('')}
     </div>` : '';
   const na = nightAuto(k, selDay);
@@ -1068,15 +1070,12 @@ document.addEventListener('click', async e => {
   if (t.dataset.slipdel != null) {
     const day = getDay(curKey, selDay), key = t.dataset.slipdel, log = day && day.slipLog && day.slipLog[key];
     if (log && await ask(`刪除這張工作單（${slipSummary(log, curKey)}）？會一起扣掉它加的張數。`, '刪除', true)) {
-      for (const x of log.items) { const c = day.c[x.id]; if (c) c[log.kind] = Math.max(0, c[log.kind] - x.qty); }
-      if (log.ded) day.ded = Math.max(0, toNum(day.ded) - log.ded) || '';   // 這張單自動扣的人頭也還回去
-      if (log.dot) day.dot = Math.max(0, toNum(day.dot) - log.dot) || '';   // 這張單加的多特瑞也扣回去
-      delete day.slipLog[key];
-      applyNight(curKey, selDay);
+      removeSlip(curKey, selDay, key);
       cleanupDay(curKey, selDay); save(); renderDaily(); toast('已刪除');
     }
     return;
   }
+  if (t.dataset.slipedit != null) { editSlip(curKey, selDay, t.dataset.slipedit); return; }
   if (t.id === 'nightReset') {
     const day = getDay(curKey, selDay);
     if (day) { delete day.nightAuto; applyNight(curKey, selDay); cleanupDay(curKey, selDay); save(); renderDaily(); }
@@ -1873,13 +1872,15 @@ function openScanSheet(p) {
   scanDraft = p;
   const opts = sel => state.services.map(s => `<option value="${s.id}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}${s.hidden ? '（未顯示）' : ''}</option>`).join('')
     + `<option value="${DOT}"${sel === DOT ? ' selected' : ''}>多特瑞（次）</option>`;
-  const work = p.dateGuessed ? p.date : slipWorkDate(p.date, p.time);
-  const prev = work && p.no ? slipRecorded(work, slipKey(p.dateGuessed ? '' : p.date, work, p.no)) : null;
+  const ed = p.edit;   // 編輯既有的一張：畫面上是「編輯」「儲存」，沒有辨識文字、重新掃描
+  const work = ed ? `${ed.k}-${String(ed.d).padStart(2, '0')}` : p.dateGuessed ? p.date : slipWorkDate(p.date, p.time);
+  const prev = !ed && work && p.no ? slipRecorded(work, slipKey(p.dateGuessed ? '' : p.date, work, p.no)) : null;
   $('#sheetBody').innerHTML = `
-    <h2>確認工作單</h2>
+    <h2>${ed ? '編輯工作單' : '確認工作單'}</h2>
+    ${ed ? '<p class="note" style="margin-top:0">可以改項目、數量、種類和日期；改日期會把這張單搬到那一天。項目選「（不加入）」或數量 0 就是拿掉那一項。</p>' : ''}
     ${prev ? `<p class="warn">這張單（編號 ${esc(p.no)}）${+work.slice(5, 7)}/${+work.slice(8)} 已經記過：${esc(slipSummary(prev, work.slice(0, 7)))}。按「取代」會刪掉舊的內容，改用這次掃描的內容。</p>` : ''}
     ${p.unsure && p.unsure.length ? `<p class="warn">還沒全部確認（${esc(p.unsure.join('、'))}），下面是目前讀到的內容，請檢查後再加入。</p>` : ''}
-    ${work !== p.date ? `<p class="note" style="margin-top:0">凌晨 4 點前的單算前一天（單上印的是 ${+p.date.slice(5, 7)}/${+p.date.slice(8)}）。</p>` : ''}
+    ${!ed && work !== p.date ? `<p class="note" style="margin-top:0">凌晨 4 點前的單算前一天（單上印的是 ${+p.date.slice(5, 7)}/${+p.date.slice(8)}）。</p>` : ''}
     <div class="grid2">
       <div class="field"><label for="scanDate">日期</label><input id="scanDate" type="date" value="${esc(work)}"></div>
       <div class="field"><label>時間・編號</label><input value="${esc([p.time, p.no && '編號 ' + p.no].filter(Boolean).join('　'))}" disabled></div>
@@ -1889,17 +1890,18 @@ function openScanSheet(p) {
     <div class="field" style="margin-top:10px"><label>項目</label>
       ${p.items.length ? p.items.map((it, i) => `
         <div class="scan-item">
-          <div class="scan-raw"><span data-sraw="${i}">${esc(printedName(it.raw, it.svc) || it.raw || '（沒讀到品名）')}</span>${(p.pendingItems || []).includes(i) ? '<b class="unsure">（未確認）</b>' : ''}</div>
+          <div class="scan-raw"><span data-sraw="${i}">${esc(printedName(it.raw, it.svc) || it.raw || (ed ? `第 ${i + 1} 項` : '（沒讀到品名）'))}</span>${(p.pendingItems || []).includes(i) ? '<b class="unsure">（未確認）</b>' : ''}</div>
           <div class="scan-pick"><select data-si="${i}" aria-label="${esc(it.raw)} 對應的項目"><option value="">（不加入）</option>${opts(it.svc)}</select>
           <input type="number" inputmode="numeric" min="0" data-sq="${i}" value="${it.qty}" aria-label="張數"></div>
         </div>`).join('') : '<p class="note" style="margin:0">沒有辨識到品項，請重拍一張清楚、平整的照片。</p>'}
+      ${ed ? '<div class="btns" style="margin-top:8px"><button class="btn sm" id="scanAddItem">＋ 新增一項</button></div>' : ''}
     </div>
-    <details class="more" style="margin-top:8px"${p.unsure && p.unsure.length ? ' open' : ''}><summary>辨識到的文字${p.texts ? `（最近 ${p.texts.length} 格畫面）` : ''}</summary>${(p.texts || [p.rows.join('\n')])
-      .map(t => `<pre class="scan-text">${esc(t)}</pre>`).join('')}</details>
+    ${ed ? '' : `<details class="more" style="margin-top:8px"${p.unsure && p.unsure.length ? ' open' : ''}><summary>辨識到的文字${p.texts ? `（最近 ${p.texts.length} 格畫面）` : ''}</summary>${(p.texts || [p.rows.join('\n')])
+      .map(t => `<pre class="scan-text">${esc(t)}</pre>`).join('')}</details>`}
     <div class="btns" style="margin-top:14px;justify-content:flex-end">
       ${lastScanSrc ? `<button class="btn" id="scanRetry" style="margin-right:auto">${lastScanSrc === 'paste' ? '重新貼上' : '重新掃描'}</button>` : ''}
       <button class="btn" id="scanCancel">取消</button>
-      <button class="btn${lastScanSrc ? '' : ' primary'}" id="scanAdd"${p.items.length ? '' : ' disabled'}>${prev ? '取代' : '加入'}</button>
+      <button class="btn${lastScanSrc ? '' : ' primary'}" id="scanAdd"${p.items.length ? '' : ' disabled'}>${ed ? '儲存' : prev ? '取代' : '加入'}</button>
       ${lastScanSrc ? `<button class="btn primary" id="scanAddNext"${p.items.length ? '' : ' disabled'}>${prev ? '取代' : '加入'}，${lastScanSrc === 'paste' ? '貼' : '掃'}下一張</button>` : ''}
     </div>`;
   $('#sheet').hidden = false;
@@ -1918,6 +1920,30 @@ function printedName(raw, svc) {
 }
 // 每天記下每張工作單加了什麼（day.slipLog[編號] = { kind, items: [{ id, qty }] }），
 // 同編號再掃一次（例如重印）就把舊的扣掉、改用新的
+// 把一張工作單從那天拿掉：張數、自動扣的人頭、多特瑞都扣回去（刪除、編輯、同編號取代都走這裡）
+function removeSlip(k, d, key) {
+  const day = getDay(k, d), log = day && day.slipLog && day.slipLog[key];
+  if (!log) return null;
+  for (const x of log.items) { const c = day.c[x.id]; if (c) c[log.kind] = Math.max(0, c[log.kind] - x.qty); }
+  if (log.ded) day.ded = Math.max(0, toNum(day.ded) - log.ded) || '';
+  if (log.dot) day.dot = Math.max(0, toNum(day.dot) - log.dot) || '';
+  delete day.slipLog[key];
+  applyNight(k, d);
+  return log;
+}
+// 編輯工作單明細裡的一張：用確認畫面改項目、數量、種類、日期，儲存時先扣掉舊的再加新的
+function editSlip(k, d, key) {
+  const day = getDay(k, d), log = day && day.slipLog && day.slipLog[key];
+  if (!log) return;
+  // 紀錄裡是該月的項目 id（Excel 匯入的月份是 s0…），選單用設定裡的 id，照名稱對回去
+  const pref = id => { const n = svcLabel(id, k); return (state.services.find(s => s.name === n) || {}).id || id; };
+  const items = log.items.map(x => ({ raw: '', qty: x.qty, svc: pref(x.id) }));
+  if (log.dot) items.push({ raw: '', qty: log.dot, svc: DOT });
+  const date = `${k}-${String(d).padStart(2, '0')}`;
+  lastScanSrc = null;
+  openScanSheet({ date: log.date || date, time: log.time || '', no: log.no || '', kind: log.kind, items, rows: [],
+    dateGuessed: !log.date, edit: { k, d, key } });
+}
 function slipRecorded(date, key) {
   const k = date.slice(0, 7), d = +date.slice(8), m = state.months[k];
   return (m && m.days[d] && m.days[d].slipLog && m.days[d].slipLog[key]) || null;
@@ -1939,15 +1965,14 @@ function addScan() {
   // 多特瑞精油：不是項目，記在當天的「多特瑞（次）」
   const dotQty = all.filter(x => x.pref === DOT).reduce((a, x) => a + x.qty, 0);
   const picks = all.filter(x => x.pref !== DOT).map(x => Object.assign(x, { id: monthSvcId(k, x.pref) }));
-  if (!picks.length && !dotQty) { toast('沒有要加入的項目'); cleanupDay(k, d); return; }
+  if (!picks.length && !dotQty) { toast(p.edit ? '沒有留下任何項目；要整張刪掉請用「刪除」' : '沒有要加入的項目'); cleanupDay(k, d); return; }
   state.slipMap = state.slipMap || {};
-  const key = slipKey(p.dateGuessed ? '' : p.date, date, p.no);
+  // 編輯：先把原本那張（可能在別天）扣掉，再當成新的加進去；沒編號的單沿用原本的鍵
+  const old = p.edit ? removeSlip(p.edit.k, p.edit.d, p.edit.key) : null;
+  if (p.edit && (p.edit.k !== k || p.edit.d !== d)) cleanupDay(p.edit.k, p.edit.d);   // 搬到別天：原本那天空了就清掉
+  const key = p.edit && /^x/.test(p.edit.key) ? p.edit.key : slipKey(p.dateGuessed ? '' : p.date, date, p.no);
   const prev = p.no ? slipRecorded(date, key) : null;
-  if (prev) {                                           // 同編號：先把舊的那張扣掉（張數、扣人頭、多特瑞）
-    for (const x of prev.items) { const c = day.c[x.id]; if (c) c[prev.kind] = Math.max(0, c[prev.kind] - x.qty); }
-    day.ded = Math.max(0, toNum(day.ded) - toNum(prev.ded)) || '';
-    if (prev.dot) day.dot = Math.max(0, toNum(day.dot) - prev.dot) || '';
-  }
+  if (prev) removeSlip(k, d, key);                      // 同編號：先把舊的那張扣掉（張數、扣人頭、多特瑞）
   // 一張單是一位客人：多個項目、或同項目 X2 以上，多出來的自動扣人頭（總數量 − 1；多特瑞不算）
   const ded = Math.max(0, picks.reduce((a, x) => a + x.qty, 0) - 1);
   if (ded) day.ded = toNum(day.ded) + ded;
@@ -1957,7 +1982,7 @@ function addScan() {
     const c = day.c[id] || (day.c[id] = [0, 0, 0]);
     c[p.kind] += qty;
     // 記住這個品項名稱，下次直接對應（亂碼、太短的不記，免得下次對錯）
-    if ((it.raw.match(/[一-鿿]/g) || []).length >= 2 && it.raw.length >= 4) state.slipMap[it.raw] = pref;
+    if (!p.edit && (it.raw.match(/[一-鿿]/g) || []).length >= 2 && it.raw.length >= 4) state.slipMap[it.raw] = pref;
     added.push(`${(state.services.find(s => s.id === pref) || {}).name} ×${qty}`);
   }
   if (dotQty) { day.dot = toNum(day.dot) + dotQty; added.push(`多特瑞 ×${dotQty}`); }
@@ -1968,8 +1993,16 @@ function addScan() {
   autoLeave(k);                                       // 順便更新假表（判斷晚班日），一分鐘最多一次
   closeScanSheet();
   curKey = k; selDay = d; curTab = 'daily'; render();
-  toast(`${prev ? '已取代' : '已加入'} ${+k.slice(5)}/${d} ${KIND_LABELS[p.kind].slice(2)}：${added.join('、')}${ded ? `（扣人頭 ${ded}）` : ''}`);
+  toast(`${old ? '已修改' : prev ? '已取代' : '已加入'} ${+k.slice(5)}/${d} ${KIND_LABELS[p.kind].slice(2)}：${added.join('、')}${ded ? `（扣人頭 ${ded}）` : ''}`);
   return true;
+}
+// 編輯時多加一項（先把畫面上改過的選擇留住，再重畫）
+function addScanItem() {
+  const p = scanDraft;
+  p.items.forEach((it, i) => { const s = document.querySelector(`[data-si="${i}"]`), q = document.querySelector(`[data-sq="${i}"]`); if (s) it.svc = s.value || null; if (q) it.qty = toNum(q.value); });
+  p.items.push({ raw: '', qty: 1, svc: null });
+  p.date = $('#scanDate').value || p.date;
+  openScanSheet(p);
 }
 // 「加入，掃下一張」：用剛剛同一種方式（即時掃描／拍照／相簿／貼上）接著掃下一張
 let lastScanSrc = null;
@@ -2532,6 +2565,7 @@ document.addEventListener('click', e => {
   if (t.dataset.kind != null) { scanDraft.kind = +t.dataset.kind; document.querySelectorAll('#sheet .seg-b').forEach(b => b.classList.toggle('on', b === t)); }
   else if (t.id === 'scanCancel') closeScanSheet();
   else if (t.id === 'scanAdd') addScan();
+  else if (t.id === 'scanAddItem') addScanItem();
   else if (t.id === 'scanAddNext') { if (addScan()) setTimeout(scanAgain, 300); }
   else if (t.id === 'scanRetry') { closeScanSheet(); setTimeout(scanAgain, 200); }   // 讀錯了：不加入，直接重新辨識
   else if (t.id === 'pasteGo') {
