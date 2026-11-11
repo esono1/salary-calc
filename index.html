@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.12.43">
+<meta name="salary-page-version" content="2026.11.12.44">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1138,7 +1138,8 @@ function leaveCard(k, c) {
       ${lv.items.map(x => `<div class="row"><div class="k">${md(x.date)} ${esc(x.kind)}${x.hours ? ` ${esc(x.hours)}` : ''}<small>${x.pending ? '待核准，還沒計入' : x.counted ? '計入請假天數' : '不計入請假天數'}</small></div><div class="v${x.minus1000 ? ' neg' : ''}">${x.minus1000 ? '−' + fmt(state.rules.leaveDeduct) : ''}</div></div>`).join('')}
       <div class="row total"><div class="k">請假天數<small>${effect}</small></div><div class="v">${c.leaveDays} 天</div></div>
     </div>
-    <p class="note">${lv.sourceUpdatedAt ? `假表最後修改：${esc(lv.sourceUpdatedAt)}　·　` : ''}App 讀取於 ${when}${leaveFrozen(k) ? '<br>這個月已經結束，假表不再自動更新；需要時按「從休假表更新」。' : ''}</p>`;
+    <p class="note">${lv.sourceUpdatedAt ? `假表最後修改：${esc(lv.sourceUpdatedAt)}　·　` : ''}App 讀取於 ${when}${leaveFrozen(k) ? '<br>這個月已經結束，假表不再自動更新；需要時按「從休假表更新」。'
+      : k < curWorkMonth() ? `<br>這個月已經結束，假表會自動更新到 ${+leaveOpenUntil(k).slice(5, 7)}/${LEAVE_FREEZE_DAY} 為止，之後固定。` : ''}</p>`;
   }
   const btn = app && link ? '<div class="btns" style="margin-top:8px"><button class="btn sm" data-act="leave">從休假表更新</button></div>' : '';
   return `<div class="card"><h2>休假與請假<span class="hint">休假表</span></h2>${body}${btn}</div>`;
@@ -1160,10 +1161,17 @@ function lateCard(k, c) {
 // （假表系統有流量上限，網站本身也快取 60 秒，再快讀到的也是同一份）
 const LEAVE_MIN_GAP = 60 * 1000;
 const leaveAutoDone = new Map();   // 月份 → 上次自動讀取的時間
-// 已經過去的月份（凌晨 4 點前還算前一天）讀過假表就固定下來，不再自動更新（使用者 2026-11-12：過去的月份不用改）；
-// 真的要更新，在那個月按「從休假表更新」
-const curWorkMonth = () => { const n = new Date(Date.now() - 4 * 3600 * 1000); return ymKey(n.getFullYear(), n.getMonth() + 1); };
-const leaveFrozen = mk => mk < curWorkMonth() && !!(state.months[mk] && state.months[mk].leave);
+// 已經過去的月份讀過假表就固定下來，不再自動更新（使用者 2026-11-12：過去的月份不用改）；
+// 但上個月到這個月 10 號（含）前還會自動更新，月底、月初結算時的修正（補登請假、改免扣）才會帶進來。
+// 凌晨 4 點前還算前一天。固定之後真的要更新，在那個月按「從休假表更新」
+const LEAVE_FREEZE_DAY = 10;
+const workNow = () => new Date(Date.now() - 4 * 3600 * 1000);
+const curWorkMonth = () => { const n = workNow(); return ymKey(n.getFullYear(), n.getMonth() + 1); };
+const leaveOpenUntil = mk => { const n = shiftMonth(mk, 1); return `${n}-${String(LEAVE_FREEZE_DAY).padStart(2, '0')}`; };   // 這天（含）以後就固定
+const leaveFrozen = mk => {
+  if (!(state.months[mk] && state.months[mk].leave) || mk >= curWorkMonth()) return false;
+  return localDay(workNow()) > leaveOpenUntil(mk);
+};
 // 休假表每天只自動讀一次（這個月今天已經讀過就不再讀；要馬上更新可以按「從休假表更新」）
 function autoLeave(k) {
   if (!canFetchLeave() || !leaveApiUrl(state.profile.leaveLink) || leaveFrozen(k)) return;
