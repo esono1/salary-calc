@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.12.42">
+<meta name="salary-page-version" content="2026.11.12.43">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1138,7 +1138,7 @@ function leaveCard(k, c) {
       ${lv.items.map(x => `<div class="row"><div class="k">${md(x.date)} ${esc(x.kind)}${x.hours ? ` ${esc(x.hours)}` : ''}<small>${x.pending ? '待核准，還沒計入' : x.counted ? '計入請假天數' : '不計入請假天數'}</small></div><div class="v${x.minus1000 ? ' neg' : ''}">${x.minus1000 ? '−' + fmt(state.rules.leaveDeduct) : ''}</div></div>`).join('')}
       <div class="row total"><div class="k">請假天數<small>${effect}</small></div><div class="v">${c.leaveDays} 天</div></div>
     </div>
-    <p class="note">${lv.sourceUpdatedAt ? `假表最後修改：${esc(lv.sourceUpdatedAt)}　·　` : ''}App 讀取於 ${when}</p>`;
+    <p class="note">${lv.sourceUpdatedAt ? `假表最後修改：${esc(lv.sourceUpdatedAt)}　·　` : ''}App 讀取於 ${when}${leaveFrozen(k) ? '<br>這個月已經結束，假表不再自動更新；需要時按「從休假表更新」。' : ''}</p>`;
   }
   const btn = app && link ? '<div class="btns" style="margin-top:8px"><button class="btn sm" data-act="leave">從休假表更新</button></div>' : '';
   return `<div class="card"><h2>休假與請假<span class="hint">休假表</span></h2>${body}${btn}</div>`;
@@ -1160,9 +1160,13 @@ function lateCard(k, c) {
 // （假表系統有流量上限，網站本身也快取 60 秒，再快讀到的也是同一份）
 const LEAVE_MIN_GAP = 60 * 1000;
 const leaveAutoDone = new Map();   // 月份 → 上次自動讀取的時間
+// 已經過去的月份（凌晨 4 點前還算前一天）讀過假表就固定下來，不再自動更新（使用者 2026-11-12：過去的月份不用改）；
+// 真的要更新，在那個月按「從休假表更新」
+const curWorkMonth = () => { const n = new Date(Date.now() - 4 * 3600 * 1000); return ymKey(n.getFullYear(), n.getMonth() + 1); };
+const leaveFrozen = mk => mk < curWorkMonth() && !!(state.months[mk] && state.months[mk].leave);
 // 休假表每天只自動讀一次（這個月今天已經讀過就不再讀；要馬上更新可以按「從休假表更新」）
 function autoLeave(k) {
-  if (!canFetchLeave() || !leaveApiUrl(state.profile.leaveLink)) return;
+  if (!canFetchLeave() || !leaveApiUrl(state.profile.leaveLink) || leaveFrozen(k)) return;
   const lv = state.months[k] && state.months[k].leave;
   if (lv && lv.fetchedAt && lv.dayTypes && localDay(new Date(lv.fetchedAt)) === localDay()) return;
   if (Date.now() - (leaveAutoDone.get(k) || 0) < LEAVE_MIN_GAP) return;
@@ -3358,8 +3362,13 @@ async function refreshLeave(k, quiet) {
       leaveDayCache = { day: localDay(), payload: typeof j.payload === 'string' ? JSON.parse(j.payload) : (j.payload || j), updatedAt: String(j.updatedAt || '') };
     }
     const { payload, updatedAt } = leaveDayCache;
-    // 一份假表就有所有期別：這個月和其他已經讀過假表的月份一起更新
+    // 一份假表就有所有期別：這個月和其他已經讀過假表的月份一起更新；
+    // 已經過去、讀過假表的月份不動（只有在那個月按「從休假表更新」才更新它）
+    // 假表系統會把舊的假期清掉（封存）：假表裡已經沒有這個月的假期，就保留 App 原本存的，不要變成「沒有請假」而改到過去的薪水
+    let gone = false;
     for (const mk of new Set([k, ...Object.keys(state.months).filter(x => state.months[x].leave)])) {
+      if (leaveFrozen(mk) && (mk !== k || quiet)) continue;
+      if (!(payload.periods || []).some(p => String(p.start).slice(0, 7) <= mk && mk <= String(p.end).slice(0, 7))) { if (mk === k) gone = true; continue; }
       let summary;
       try { summary = leaveSummary(payload, state.profile.code, mk); } catch (e) { if (mk === k) throw e; continue; }
       summary.sourceUpdatedAt = updatedAt;                 // 假表最後一次被修改的時間（假表系統記錄的）
@@ -3370,7 +3379,7 @@ async function refreshLeave(k, quiet) {
     save();
     if (curTab === 'month' && curKey === k) renderMonth();
     if (curTab === 'daily' && curKey === k) renderDaily();
-    if (!quiet) toast('已更新休假表');
+    if (!quiet) toast(gone ? (state.months[k] && state.months[k].leave ? '假表裡已經沒有這個月的資料，保留原本存的休假與請假' : '假表裡沒有這個月的假期') : '已更新休假表');
   } catch (e) {
     if (!quiet) toast(e && e.userMsg ? e.userMsg : '休假表讀取失敗');
   } finally {
