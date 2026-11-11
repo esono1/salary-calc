@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.10.41">
+<meta name="salary-page-version" content="2026.11.12.42">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -3031,6 +3031,8 @@ async function exportExcel(keys) {
 // 2026-11-03 再同步一次：生理假（佔每日名額、不排順位、不會 -1000）、銷假 leaveCancels（整天銷假的 R 變 cancelled、
 // 空出抽籤名額）、請假可只請一段時間（標籤「請N 18-22」，空格後是時段）。
 // 2026-11-07 再同步：時段可以到分鐘（存「18:30」），顯示省略冒號（_hrsOf：「銷1830-22」「請1 1430-18」）。
+// 2026-11-12 再同步：換店別不影響已排過的假期（_storeMapOf／_storeIn／_storeAt：排假、補假、請假記的 store 優先，
+// 沒記才用技師現在的店別），每日人數、-1000 順位、假期店別限制都照這個算。
 function leaveTableRules(data) {
 // 請假改成送出就生效（不用審核）：舊的「待審核」一律視為已生效（同假表系統的 migrateData）
 (data.extraLeaves||[]).forEach(l=>{ if(l.status==='pending') l.status='approved'; });
@@ -3050,6 +3052,21 @@ function _deptIn(p,e,m){
   if(!e) return '';
   const v=(m||_deptMapOf(p)).get(e.id);
   return v&&(data.departments||[]).includes(v)?v:e.dept;
+}
+function _storeMapOf(p){
+  const m=new Map(); if(!p) return m;
+  const pid=p.id, inP=l=>l.periodId?l.periodId===pid:(l.date>=p.start&&l.date<=p.end);
+  (data.extraLeaves||[]).forEach(l=>{ if(l.store&&l.status!=='rejected'&&inP(l)) m.set(l.empId,l.store); });
+  (data.makeupLeaves||[]).forEach(x=>{ if(x.store&&x.periodId===pid) m.set(x.empId,x.store); });
+  (data.applications||[]).forEach(a=>{ if(a.store&&a.periodId===pid) m.set(a.empId,a.store); });
+  return m;
+}
+function _storeIn(p,e,m){ return e?((m||_storeMapOf(p)).get(e.id)||e.store||'竹北店'):''; }
+function _storeMapsAt(d){ return data.periods.filter(p=>p.start<=d&&d<=p.end).map(p=>_storeMapOf(p)); }
+function _storeAt(e,d,maps){
+  if(!e) return '';
+  for(const m of (maps||_storeMapsAt(d))){ const v=m.get(e.id); if(v) return v; }
+  return e.store||'竹北店';
 }
 function getLim(p,shift,d,gender){
   if(_isFreeShift(shift)) return Infinity;
@@ -3167,7 +3184,7 @@ function buildStatusMap(period,raw){
   return map;
 }
 function _inPeriodScope(p,e){
-  return (!p.genderRestrict||(e.gender||'male')===p.genderRestrict)&&(!p.storeRestrict||(e.store||'竹北店')===p.storeRestrict);
+  return (!p.genderRestrict||(e.gender||'male')===p.genderRestrict)&&(!p.storeRestrict||_storeIn(p,e)===p.storeRestrict);
 }
 function _typhoonEmps(p,t){
   const ex=new Set((t.excludeIds||[]).map(String));
@@ -3191,11 +3208,12 @@ function _dailyLimitOf(store,gender,date){
   const lim=(data.dailyLimits||{})[`${store}__${gender}__${_getDayType(date,store)}`];
   return (lim===undefined||lim<=0)?null:lim;
 }
-function _dailyGroupIds(store,gender){
-  return new Set(data.employees.filter(e=>(e.store||'竹北店')===store&&(e.gender||'male')===gender&&!_isFreeEmp(e)).map(e=>e.id));
+function _dailyGroupIds(store,gender,date){
+  const maps=_storeMapsAt(date);
+  return new Set(data.employees.filter(e=>_storeAt(e,date,maps)===store&&(e.gender||'male')===gender&&!_isFreeEmp(e)).map(e=>e.id));
 }
 function getDailyBaseCount(store,gender,date){
-  const empIds=_dailyGroupIds(store,gender);
+  const empIds=_dailyGroupIds(store,gender,date);
   const offIds=new Set();
   data.periods.filter(p=>p.start<=date&&date<=p.end).forEach(p=>{
     const statusMap=buildStatusMap(p);
@@ -3216,7 +3234,7 @@ function extraLeaveOver(l){
   const emp=data.employees.find(e=>e.id===l.empId);
   if(!emp) return false;
   if(_typhoonOf(emp,l.date)) return false; // 颱風假當天請假不扣
-  const store=emp.store||'竹北店', gender=emp.gender||'male';
+  const store=l.store||_storeAt(emp,l.date), gender=emp.gender||'male';
   const lim=_dailyLimitOf(store,gender,l.date);
   if(lim===null) return false;
   return getDailyBaseCount(store,gender,l.date)+n>lim;
@@ -3226,11 +3244,12 @@ function extraLeaveRank(l){
   if(!l||l.status==='rejected'||_elKind(l)) return 0;
   const emp=data.employees.find(e=>e.id===l.empId);
   if(!emp||_isFreeEmp(emp)) return 0; // 不受規則限制的班別：不排順位、不會 -1000（假表只顯示「請」）
-  const store=emp.store||'竹北店', gender=emp.gender||'male';
+  const maps=_storeMapsAt(l.date);
+  const store=l.store||_storeAt(emp,l.date,maps), gender=emp.gender||'male';
   const same=(data.extraLeaves||[]).filter(x=>{
     if(x.date!==l.date||x.status==='rejected'||_elKind(x)) return false;
     const e=data.employees.find(y=>y.id===x.empId);
-    return e&&!_isFreeEmp(e)&&(e.store||'竹北店')===store&&(e.gender||'male')===gender;
+    return e&&!_isFreeEmp(e)&&(x.store||_storeAt(e,x.date,maps))===store&&(e.gender||'male')===gender;
   }).sort((a,b)=>_elSeq(a)-_elSeq(b)||String(a.id).localeCompare(String(b.id)));
   return same.findIndex(x=>x.id===l.id)+1;
 }
