@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.13.45">
+<meta name="salary-page-version" content="2026.11.13.46">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -127,8 +127,10 @@ main {
 
 /* 日期列 */
 .days {
-  display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 10px; margin: 0 -2px 4px;
+  display: flex; gap: 6px; overflow-x: auto; padding: 8px 2px 10px; margin: -8px -2px 4px;
   scroll-snap-type: x proximity; scrollbar-width: thin;
+  /* 往下滑時日期列固定在頂部列下面（--topbar-h 由程式量出頂部列的高度） */
+  position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--topbar-h, 61px)); z-index: 15; background: var(--bg);
 }
 .day {
   flex: 0 0 auto; width: 46px; border: 1px solid var(--line); background: var(--surface);
@@ -900,6 +902,7 @@ function renderTop() {
   const p = state.profile;
   $('#brand').innerHTML = esc(p.name || '薪資計算') + (p.code ? `<small>${esc(p.code)}</small>` : '') + '<span class="sync-dot" id="syncDot"></span>';
   setSync(syncState);
+  setTopbarH();
 }
 function render() {
   renderTop();
@@ -1045,8 +1048,12 @@ function renderDaily() {
       <div><span>實抽</span><b>$${fmt(dc.pay)}</b></div>
     </div>`;
   const stripEl = $('#dayStrip'), sel = $('#dayStrip .sel');
-  if (sel) stripEl.scrollLeft = sel.offsetLeft - stripEl.offsetLeft - (stripEl.clientWidth - sel.offsetWidth) / 2;
+  // 把選到的那天捲到中間（用畫面上的位置算，日期列固定在上方時 offsetLeft 的基準會不一樣）
+  if (sel) stripEl.scrollLeft += sel.getBoundingClientRect().left - stripEl.getBoundingClientRect().left - (stripEl.clientWidth - sel.offsetWidth) / 2;
 }
+// 頂部列的高度（日期列要固定在它下面）：字體大小、螢幕寬度不同會變，量出來給 CSS 用
+function setTopbarH() { const t = document.querySelector('.topbar'); if (t) document.documentElement.style.setProperty('--topbar-h', t.offsetHeight + 'px'); }
+window.addEventListener('resize', setTopbarH);
 
 document.addEventListener('click', async e => {
   const t = e.target.closest('button');
