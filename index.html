@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.12.44">
+<meta name="salary-page-version" content="2026.11.13.45">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1017,7 +1017,6 @@ function renderDaily() {
       <h2>${m} 月 ${selDay} 日（${wd}）${mc.senior ? '' : `<span class="hint">抽成等級：${mc.high ? '達標價' : '未達標價'}</span>`}</h2>
       ${canScan() ? `<div class="scan-bar">
         <button class="btn primary" data-act="scan" data-src="${canLive() ? 'live' : 'camera'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>掃描工作單</button>
-        <button class="btn" data-act="scan" data-src="gallery">從相簿選</button>
       </div>` : window.AndroidBridge ? '' : `<div class="scan-bar">
         <button class="btn" data-act="paste"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/></svg>貼上工作單</button>
       </div>`}
@@ -1343,7 +1342,8 @@ async function monthAction(act, ds) {
     refreshLeave(curKey);
   } else if (act === 'scan') {
     lastScanSrc = ds.src;
-    if (ds.src === 'live') startLiveScan(); else if (appScan() && !appPaddle()) window.AndroidBridge.scanSlip(ds.src); else webPickPhoto();
+    // 即時掃描（網頁版、App 2.0 以上）；更舊的 App 只能拍一張照片辨識
+    if (ds.src === 'live') startLiveScan(); else if (appScan()) window.AndroidBridge.scanSlip('camera');
   } else if (act === 'paste') {
     lastScanSrc = 'paste';
     openPasteSheet();
@@ -2016,14 +2016,12 @@ function addScanItem() {
   p.date = $('#scanDate').value || p.date;
   openScanSheet(p);
 }
-// 「加入，掃下一張」：用剛剛同一種方式（即時掃描／拍照／相簿／貼上）接著掃下一張
+// 「加入，掃下一張」：用剛剛同一種方式（即時掃描／拍照／貼上）接著掃下一張
 let lastScanSrc = null;
 function scanAgain() {
   if (lastScanSrc === 'paste') openPasteSheet();
-  else if (lastScanSrc === 'live' && canLive()) startLiveScan();
-  else if (appScan() && !appPaddle()) window.AndroidBridge.scanSlip(lastScanSrc === 'live' ? 'camera' : lastScanSrc || 'camera');
-  else if (appPaddle()) webPickPhoto();
-  else if (webScan()) webPickPhoto();
+  else if (canLive()) startLiveScan();
+  else if (appScan()) window.AndroidBridge.scanSlip('camera');
 }
 // 網頁版（iPhone 等）：貼上手機內建文字辨識拷貝的文字
 function openPasteSheet() {
@@ -2553,24 +2551,6 @@ const WebScanner = (() => {
   });
   return { open, hint, close, releaseSoon };
 })();
-// 網頁版「從相簿選」：選一張照片辨識一次
-function webPickPhoto() {
-  const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'image/*';
-  inp.onchange = async () => {
-    const f = inp.files && inp.files[0];
-    if (!f) return;
-    const url = URL.createObjectURL(f);
-    try {
-      const img = new Image(); img.src = url; await img.decode();
-      toast(SlipOcr.ready() ? '辨識中…' : '第一次使用要下載辨識元件（約 30 MB），請稍候…');
-      const r = await SlipOcr.recognize(img, img.naturalWidth, img.naturalHeight, 1280);
-      window.onSlipScanned(JSON.stringify(r));
-    } catch (e) { toast('辨識失敗，請換一張清楚的照片'); }
-    finally { URL.revokeObjectURL(url); }
-  };
-  inp.click();
-}
 document.addEventListener('click', e => {
   const t = e.target.closest('#sheet button');
   if (!t || !scanDraft) return;
