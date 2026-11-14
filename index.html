@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.13.46">
+<meta name="salary-page-version" content="2026.11.15.47">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -784,12 +784,13 @@ function tierFor(sen) {
   return tiers[tiers.length - 1];
 }
 function dayCalc(svcs, day, high) {
-  let count = 0, lp = 0, perf = 0, pay = 0;
+  let count = 0, lp = 0, perf = 0, pay = 0, hours = 0;
   if (day) {
     for (const s of svcs) {
       const c = day.c[s.id]; if (!c) continue;
       const n = c[0] + c[1] + c[2];
       count += n;
+      hours += n * s.factor;                           // 當天的勞作時數（全部種類；跟月結算「總時數」同一種算法）
       lp += c[0] * s.factor;
       perf += n * s.price;
       pay += n * (high ? s.high : s.low);
@@ -799,7 +800,7 @@ function dayCalc(svcs, day, high) {
     pay += toNum(day.a12);
     pay += toNum(day.dot) * state.rules.doterraPay;   // 多特瑞含在每日實抽（使用者 2026-11-05；原 Excel 的每日實抽沒有含）
   }
-  return { count, net: count - toNum(day && day.ded), lp: r6(lp), perf, pay };
+  return { count, net: count - toNum(day && day.ded), lp: r6(lp), hours: floorTo(hours, 2), perf, pay };
 }
 function calcMonth(k) {
   const R = state.rules;
@@ -1042,7 +1043,7 @@ function renderDaily() {
       <div class="btns" style="margin-top:12px"><button class="btn sm danger" id="clearDay">清除這一天</button></div>
     </div>
     <div class="daysum">
-      <div><span>張數</span><b>${dc.net}${day.ded ? `<small style="font-size:11px;opacity:.8">(${dc.count})</small>` : ''}</b></div>
+      <div><span>時數</span><b>${fix(dc.hours, 2)}</b></div>
       <div><span>勞點</span><b>${fix(dc.lp, 2)}</b></div>
       <div><span>業績</span><b>$${fmt(dc.perf)}</b></div>
       <div><span>實抽</span><b>$${fmt(dc.pay)}</b></div>
