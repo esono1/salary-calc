@@ -1,0 +1,40 @@
+# 肌肉圖譜 Android App：anatomy/ 有變動時，自動在 GitHub 打包 APK。
+# 打包好的 APK 會出現在該次執行的「Artifacts」區，下載解壓縮後即可安裝。
+name: 肌肉圖譜 APK
+
+on:
+  push:
+    paths:
+      - "anatomy/app/**"
+      - "anatomy/android/**"
+      - ".github/workflows/anatomy-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: 打包 APK
+        working-directory: anatomy/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk ../muscle-atlas.apk
+          ls -l ../muscle-atlas.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: muscle-atlas-apk
+          path: anatomy/muscle-atlas.apk
+          if-no-files-found: error
