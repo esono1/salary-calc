@@ -1,0 +1,482 @@
+<title>全身肌肉分層圖譜</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap">
+<style>
+/* Layout: atlas tool. Index sidebar left, specimen stage center, specimen card floating over the stage. */
+:root {
+  --bg: #f3f1ee;
+  --panel: #fbfaf8;
+  --stage: #e7e3de;
+  --fg: #2a2224;
+  --muted: #6e6265;
+  --line: #ddd6d0;
+  --accent: #9c2f3c;
+  --accent-soft: #f2dfe0;
+  --bone: #e9e1cf;
+  --L1: #edb27c; --L2: #e8946b; --L3: #cf625a; --L4: #a7435f; --L5: #78305d; --L6: #4b2454;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-head: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --shadow: 0 6px 24px rgba(60, 30, 35, .12);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17131a; --panel: #1f1a22; --stage: #120f15; --fg: #efe8ea; --muted: #a69aa0; --line: #342c37;
+    --accent: #e2717d; --accent-soft: #3b2129; --bone: #cfc6b4; --shadow: 0 6px 24px rgba(0,0,0,.45); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17131a; --panel: #1f1a22; --stage: #120f15; --fg: #efe8ea; --muted: #a69aa0; --line: #342c37;
+  --accent: #e2717d; --accent-soft: #3b2129; --bone: #cfc6b4; --shadow: 0 6px 24px rgba(0,0,0,.45); color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; }
+.app { display: grid; grid-template-columns: 300px minmax(0, 1fr); height: 100%; }
+aside.index { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--panel); }
+.brand { padding-block: 16px 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px; }
+.brand h1 { font-family: var(--font-head); font-size: 20px; margin: 0; letter-spacing: .02em; text-wrap: balance; }
+.brand p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.search { padding-block: 6px 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px; }
+.search input { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; }
+.search input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.list { overflow-y: auto; flex: 1; min-height: 0; padding-bottom: 24px; }
+.list h3 { position: sticky; top: 0; margin: 0; padding: 8px 16px 6px max(16px, env(safe-area-inset-left, 0px)); font-size: 11px; letter-spacing: .12em; color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line); font-weight: 500; z-index: 1; }
+.row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 16px 7px max(16px, env(safe-area-inset-left, 0px)); cursor: pointer; border: 0; background: none; width: 100%; text-align: left; }
+.row:hover { background: var(--accent-soft); }
+.row.on { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.row .dot { width: 10px; height: 10px; border-radius: 3px; }
+.row .nm { min-width: 0; }
+.row .nm b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .nm small { display: block; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .lv { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.row.gone .nm b { text-decoration: line-through; color: var(--muted); }
+
+main.stage { position: relative; min-width: 0; min-height: 0; background: var(--stage); overflow: hidden; }
+canvas#gl { display: block; width: 100%; height: 100%; touch-action: none; }
+.toolbar { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; pointer-events: none; }
+.toolbar > * { pointer-events: auto; }
+.grp { display: flex; align-items: center; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 3px; box-shadow: var(--shadow); }
+.grp .lab { font-size: 11px; color: var(--muted); padding: 0 6px 0 8px; letter-spacing: .06em; }
+.btn { border: 0; background: none; padding: 6px 10px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--accent-soft); }
+.btn.on { background: var(--accent); color: #fff; }
+.btn:focus-visible, .chip:focus-visible, .row:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn[disabled] { opacity: .4; cursor: default; }
+input[type=range] { width: 90px; accent-color: var(--accent); }
+
+.legend { position: absolute; left: 12px; bottom: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); max-width: calc(100% - 24px); }
+.legend .t { font-size: 11px; color: var(--muted); letter-spacing: .06em; margin-bottom: 6px; display: flex; justify-content: space-between; gap: 12px; }
+.legend .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 4px 10px 4px 6px; cursor: pointer; font-size: 12px; font-variant-numeric: tabular-nums; }
+.chip i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+.chip.off { opacity: .4; }
+.chip.off i { background: transparent !important; box-shadow: inset 0 0 0 2px var(--muted); }
+.legend .peel { display: flex; gap: 6px; margin-top: 8px; }
+.legend .peel .btn { border: 1px solid var(--line); background: var(--bg); font-size: 12px; padding: 5px 10px; }
+.removed { margin-top: 8px; font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+.card { position: absolute; right: 12px; top: 64px; bottom: 12px; width: 330px; max-width: calc(100% - 24px); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; }
+.card .hd { padding: 14px 16px 12px; border-bottom: 1px solid var(--line); }
+.card .hd .x { float: right; margin: -4px -6px 0 0; }
+.card h2 { font-family: var(--font-head); font-size: 22px; margin: 0; line-height: 1.25; text-wrap: balance; }
+.card .sub { color: var(--muted); font-size: 12px; margin-top: 4px; line-height: 1.5; }
+.card .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.card .stats div { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+.card .stats small { display: block; font-size: 11px; color: var(--muted); }
+.card .stats b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.card .acts { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.card .acts .btn { border: 1px solid var(--line); background: var(--bg); font-size: 12px; }
+.card .acts .btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.card .bd { overflow-y: auto; padding: 4px 16px 16px; flex: 1; min-height: 0; }
+.card h4 { font-size: 12px; letter-spacing: .08em; color: var(--muted); margin: 14px 0 6px; font-weight: 500; }
+.card .note { font-size: 12px; color: var(--muted); background: var(--bg); border-radius: 8px; padding: 8px 10px; margin-top: 10px; line-height: 1.6; }
+.rel { display: grid; grid-template-columns: 10px minmax(0, 1fr) 64px 34px; gap: 8px; align-items: center; padding: 5px 4px; border-radius: 6px; cursor: pointer; border: 0; background: none; width: 100%; text-align: left; font-size: 13px; }
+.rel:hover { background: var(--accent-soft); }
+.rel .dot { width: 10px; height: 10px; border-radius: 3px; }
+.rel .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rel .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.rel .bar span { display: block; height: 100%; background: var(--accent); }
+.rel .pc { font-size: 12px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.empty { color: var(--muted); font-size: 12px; padding: 4px; }
+.hint { position: absolute; right: 12px; top: 64px; width: 330px; max-width: calc(100% - 24px); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 14px 16px; line-height: 1.7; font-size: 13px; }
+.hint h2 { font-family: var(--font-head); font-size: 17px; margin: 0 0 6px; }
+.hint ul { margin: 0; padding-left: 18px; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+footer.credit { font-size: 10.5px; color: var(--muted); padding: 8px 16px 12px max(16px, env(safe-area-inset-left, 0px)); border-top: 1px solid var(--line); line-height: 1.5; }
+footer.credit a { color: inherit; }
+
+@media (max-width: 820px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 62vh auto; height: auto; }
+  main.stage { grid-row: 1; height: 62vh; }
+  aside.index { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); max-height: none; }
+  .list { overflow: visible; }
+  .card, .hint { position: fixed; top: auto; left: 0; right: 0; bottom: 0; width: auto; max-width: none; max-height: 52vh; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); z-index: 20; }
+  .hint { display: none; }
+  .legend { bottom: 8px; left: 8px; padding: 8px 10px; }
+  .toolbar { top: 8px; left: 8px; right: 8px; gap: 6px; }
+  .grp .lab { display: none; }
+  .btn { padding: 5px 8px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <aside class="index">
+    <div class="brand">
+      <h1>全身肌肉分層圖譜</h1>
+      <p><span id="count">—</span> 塊肌肉，依「由淺到深」自動分層。點選肌肉看它被誰覆蓋、又覆蓋了誰。</p>
+    </div>
+    <div class="search"><input id="q" type="search" placeholder="搜尋中文、英文或拉丁名，例如 臀中肌、soleus" autocomplete="off"></div>
+    <div class="list" id="list"></div>
+    <footer class="credit">模型：<a href="https://github.com/Z-Anatomy/Models-of-human-anatomy" target="_blank" rel="noopener">Z-Anatomy</a>（CC BY-SA 4.0），源自 BodyParts3D © DBCLS；經 Svitylo 3D Anatomy Atlas 轉檔。本頁簡化網格、計算分層並加上中文名稱，以相同授權釋出。僅供學習與繪畫參考，非醫療用途。</footer>
+  </aside>
+  <main class="stage">
+    <canvas id="gl"></canvas>
+    <div class="loading" id="loading">正在載入模型…</div>
+    <div class="toolbar">
+      <div class="grp" role="group" aria-label="視角">
+        <span class="lab">視角</span>
+        <button class="btn" data-view="front">前</button><button class="btn" data-view="back">後</button><button class="btn" data-view="left">左</button><button class="btn" data-view="right">右</button>
+      </div>
+      <div class="grp" role="group" aria-label="上色">
+        <span class="lab">上色</span>
+        <button class="btn on" data-color="layer">層次</button><button class="btn" data-color="natural">肌肉色</button>
+      </div>
+      <div class="grp" role="group" aria-label="顯示">
+        <button class="btn" id="bones">骨骼</button>
+        <button class="btn" data-side="R">右半</button><button class="btn" data-side="L">左半</button><button class="btn on" data-side="">雙側</button>
+      </div>
+      <div class="grp"><span class="lab">分離</span><input id="explode" type="range" min="0" max="100" value="0" aria-label="分離程度"></div>
+    </div>
+    <div class="legend">
+      <div class="t"><span>層次（點選開關）</span><span>1 = 最淺</span></div>
+      <div class="chips" id="chips"></div>
+      <div class="peel">
+        <button class="btn" id="peel">剝掉最外一層</button>
+        <button class="btn" id="unpeel">放回一層</button>
+        <button class="btn" id="reset">全部復原</button>
+      </div>
+      <div class="removed" id="removed" hidden></div>
+    </div>
+    <div class="hint" id="hint">
+      <h2>怎麼用</h2>
+      <ul>
+        <li>拖曳旋轉，滾輪或雙指縮放，右鍵或雙指拖曳平移。</li>
+        <li><b>點一下</b>肌肉：看名稱、層次、誰蓋住它。</li>
+        <li><b>按兩下</b>肌肉：把它拆下來，看底下是什麼。</li>
+        <li>左下角的層次按鈕可以一層一層剝開。</li>
+        <li>「只看相鄰」會把上面那層變半透明，下面那層實心顯示。</li>
+      </ul>
+    </div>
+    <div class="card" id="card" hidden></div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script id="meta" type="application/json">__META__</script>
+<script id="geo" type="application/octet-stream">__GEO__</script>
+<script>
+(async function () {
+  const META = JSON.parse(document.getElementById('meta').textContent);
+  const MU = META.muscles;
+  const NL = Math.max(...MU.map(m => m.layer));
+  const $ = s => document.querySelector(s);
+  const css = getComputedStyle(document.documentElement);
+  const tok = n => css.getPropertyValue(n).trim();
+  const layerHex = l => tok('--L' + Math.min(l, 6));
+  const SIDE = { L: '左', R: '右', '': '' };
+  const label = m => m.zh + (m.side ? '（' + SIDE[m.side] + '）' : '');
+
+  // ---------- decode geometry
+  let bytes;
+  try {
+    const b64 = document.getElementById('geo').textContent.trim();
+    const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const ds = new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'));
+    bytes = await new Response(ds).arrayBuffer();
+  } catch (e) {
+    $('#loading').textContent = '這個瀏覽器無法解壓縮模型資料，請改用新版 Chrome、Edge、Safari 或 Firefox。';
+    return;
+  }
+  const deq = (off, nv) => {
+    const q = new Uint16Array(bytes, off, nv * 3), f = new Float32Array(nv * 3);
+    for (let i = 0; i < f.length; i++) { const k = i % 3; f[i] = META.min[k] + q[i] / 65535 * META.size[k]; }
+    return f;
+  };
+
+  // ---------- three setup
+  const canvas = $('#gl');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 20);
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true; controls.dampingFactor = 0.12; controls.minDistance = 0.08; controls.maxDistance = 6;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x6b5a5a, 0.75));
+  const key = new THREE.DirectionalLight(0xffffff, 0.75); camera.add(key); key.position.set(0.6, 1, 1);
+  const rim = new THREE.DirectionalLight(0xffeee8, 0.25); camera.add(rim); rim.position.set(-1, 0.3, -0.6);
+  scene.add(camera);
+
+  const group = new THREE.Group(); scene.add(group);
+  const tendonCol = new THREE.Color('#efe6dc');
+  const meshes = MU.map((m, i) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(deq(m.p, m.nv), 3));
+    g.setIndex(new THREE.BufferAttribute(new Uint16Array(bytes, m.i, m.ni), 1));
+    g.computeVertexNormals(); g.computeBoundingSphere();
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(m.nv * 3), 3));
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(g, mat);
+    mesh.userData.i = i;
+    m.flag = new Uint8Array(bytes, m.f, m.nv);
+    m.center = g.boundingSphere.center.clone();
+    m.covers = [];
+    group.add(mesh);
+    return mesh;
+  });
+  MU.forEach((m, i) => m.cb.forEach(([o, pc]) => MU[o].covers.push([i, pc])));
+  MU.forEach(m => m.covers.sort((a, b) => b[1] - a[1]));
+  let boneMesh;
+  {
+    const b = META.bone, g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(deq(b.p, b.nv), 3));
+    g.setIndex(new THREE.BufferAttribute(new Uint32Array(bytes, b.i, b.ni), 1));
+    g.computeVertexNormals();
+    boneMesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: tok('--bone'), roughness: 0.8 }));
+    boneMesh.visible = false; scene.add(boneMesh);
+  }
+  $('#loading').remove();
+  $('#count').textContent = new Set(MU.map(m => m.en)).size + ' 種、' + MU.length;
+
+  // ---------- state
+  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0 };
+  const lastRemoved = [];
+
+  function paint() {
+    const c = new THREE.Color(), base = new THREE.Color();
+    MU.forEach((m, i) => {
+      base.set(st.color === 'layer' ? layerHex(m.layer) : '#b9474a');
+      const tc = st.color === 'layer' ? base.clone().lerp(tendonCol, 0.55) : tendonCol;
+      const arr = meshes[i].geometry.attributes.color.array;
+      for (let v = 0; v < m.nv; v++) { c.copy(m.flag[v] ? tc : base); arr[v * 3] = c.r; arr[v * 3 + 1] = c.g; arr[v * 3 + 2] = c.b; }
+      meshes[i].geometry.attributes.color.needsUpdate = true;
+    });
+  }
+
+  function related(i) { const s = new Set([i]); MU[i].cb.forEach(x => s.add(x[0])); MU[i].covers.forEach(x => s.add(x[0])); return s; }
+
+  function apply() {
+    const rel = st.focus && st.sel >= 0 ? related(st.sel) : null;
+    const above = rel ? new Set(MU[st.sel].cb.map(x => x[0])) : null;
+    MU.forEach((m, i) => {
+      const mesh = meshes[i], mat = mesh.material;
+      let vis = !st.layersOff.has(m.layer) && !st.removed.has(i) && (!st.side || m.side === st.side || !m.side);
+      if (rel) vis = rel.has(i) && (!st.side || m.side === st.side || !m.side);
+      if (i === st.sel) vis = true;
+      mesh.visible = vis;
+      const ghost = rel && above.has(i);
+      mat.transparent = ghost; mat.opacity = ghost ? 0.28 : 1; mat.depthWrite = !ghost;
+      mat.color.set(i === st.sel ? '#5fb3d9' : '#ffffff');
+      mat.emissive.set(i === st.sel ? '#1d6f9a' : '#000000');
+      mat.emissiveIntensity = i === st.sel ? 0.5 : 0;
+      mesh.renderOrder = ghost ? 2 : 0;
+      const k = st.explode * 0.05 * (NL + 1 - m.layer);
+      mesh.position.set(m.o[0] * k, m.o[1] * k, m.o[2] * k);
+    });
+    renderChips(); renderList(); renderRemoved();
+  }
+
+  // ---------- legend
+  const counts = {}; MU.forEach(m => counts[m.layer] = (counts[m.layer] || 0) + 1);
+  function renderChips() {
+    $('#chips').innerHTML = '';
+    for (let l = 1; l <= NL; l++) {
+      const b = document.createElement('button');
+      b.className = 'chip' + (st.layersOff.has(l) ? ' off' : '');
+      b.innerHTML = `<i style="background:${layerHex(l)}"></i>第 ${l} 層 · ${counts[l]}`;
+      b.setAttribute('aria-pressed', !st.layersOff.has(l));
+      b.onclick = () => { st.layersOff.has(l) ? st.layersOff.delete(l) : st.layersOff.add(l); apply(); };
+      $('#chips').appendChild(b);
+    }
+    $('#unpeel').disabled = st.layersOff.size === 0;
+    $('#peel').disabled = st.layersOff.size >= NL - 1;
+  }
+  $('#peel').onclick = () => { for (let l = 1; l < NL; l++) if (!st.layersOff.has(l)) { st.layersOff.add(l); break; } apply(); };
+  $('#unpeel').onclick = () => { const on = [...st.layersOff].sort((a, b) => b - a); if (on.length) st.layersOff.delete(on[0]); apply(); };
+  $('#reset').onclick = () => { st.layersOff.clear(); st.removed.clear(); lastRemoved.length = 0; st.focus = false; apply(); renderCard(); };
+  function renderRemoved() {
+    const el = $('#removed');
+    el.hidden = st.removed.size === 0;
+    if (!st.removed.size) return;
+    el.innerHTML = `已拆下 ${st.removed.size} 塊 `;
+    const b = document.createElement('button'); b.className = 'btn'; b.style.cssText = 'border:1px solid var(--line);background:var(--bg);font-size:12px;padding:3px 8px';
+    b.textContent = '放回上一塊'; b.onclick = () => { const i = lastRemoved.pop(); if (i != null) st.removed.delete(i); apply(); };
+    el.appendChild(b);
+  }
+
+  // ---------- list
+  const groups = META.regions.map((r, ri) => {
+    const names = new Map();
+    MU.forEach((m, i) => { if (m.region === ri) { if (!names.has(m.en)) names.set(m.en, []); names.get(m.en).push(i); } });
+    return { r, items: [...names.values()].sort((a, b) => MU[a[0]].layer - MU[b[0]].layer || MU[a[0]].zh.localeCompare(MU[b[0]].zh, 'zh-Hant')) };
+  });
+  function renderList() {
+    const q = $('#q').value.trim().toLowerCase();
+    const frag = document.createDocumentFragment();
+    groups.forEach(g => {
+      const items = g.items.filter(ix => { const m = MU[ix[0]]; return !q || (m.zh + ' ' + m.en + ' ' + m.la).toLowerCase().includes(q); });
+      if (!items.length) return;
+      const h = document.createElement('h3'); h.textContent = g.r + ' · ' + items.length; frag.appendChild(h);
+      items.forEach(ix => {
+        const m = MU[ix[0]];
+        const pick = ix.find(i => MU[i].side === (st.side || 'R')) ?? ix[0];
+        const b = document.createElement('button');
+        b.className = 'row' + (ix.includes(st.sel) ? ' on' : '') + (ix.every(i => st.removed.has(i)) ? ' gone' : '');
+        b.innerHTML = `<span class="dot" style="background:${layerHex(m.layer)}"></span><span class="nm"><b>${m.zh}</b><small>${m.en}</small></span><span class="lv">L${m.layer}</span>`;
+        b.onclick = () => select(ix.includes(st.sel) && ix.length > 1 ? ix.find(i => i !== st.sel) : pick, true);
+        frag.appendChild(b);
+      });
+    });
+    const list = $('#list'); const top = list.scrollTop;
+    list.innerHTML = ''; list.appendChild(frag); list.scrollTop = top;
+    if (!list.children.length) list.innerHTML = '<p class="empty" style="padding:16px">找不到符合的肌肉。試試中文全名或英文名的一部分。</p>';
+  }
+  $('#q').addEventListener('input', renderList);
+
+  // ---------- card
+  function relRow(i, pc) {
+    const m = MU[i];
+    const b = document.createElement('button'); b.className = 'rel';
+    b.innerHTML = `<span class="dot" style="background:${layerHex(m.layer)}"></span><span class="nm">${label(m)}</span><span class="bar"><span style="width:${pc}%"></span></span><span class="pc">${pc}%</span>`;
+    b.title = `第 ${m.layer} 層`;
+    b.onclick = () => select(i, true);
+    return b;
+  }
+  function renderCard() {
+    const card = $('#card');
+    if (st.sel < 0) { card.hidden = true; $('#hint').hidden = false; return; }
+    $('#hint').hidden = true; card.hidden = false;
+    const m = MU[st.sel];
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" id="cx" aria-label="關閉">✕</button>
+        <h2>${label(m)}</h2>
+        <div class="sub">${m.en}${m.la ? '<br><i>' + m.la + '</i>' : ''}</div>
+        <div class="stats">
+          <div><small>層次</small><b>第 ${m.layer} 層</b></div>
+          <div><small>直接露在表面</small><b>${m.exposed}%</b></div>
+          <div><small>部位</small><b>${META.regions[m.region]}</b></div>
+        </div>
+        <div class="acts">
+          <button class="btn ${st.focus ? 'on' : ''}" id="cf">只看相鄰</button>
+          <button class="btn" id="cr">拆下這塊</button>
+          <button class="btn" id="cz">鏡頭對準</button>
+        </div>
+      </div>
+      <div class="bd" id="cbd"></div>`;
+    const bd = card.querySelector('#cbd');
+    const h1 = document.createElement('h4'); h1.textContent = '被這些肌肉蓋住（在它上面）'; bd.appendChild(h1);
+    if (m.cb.length) m.cb.forEach(([o, pc]) => bd.appendChild(relRow(o, pc)));
+    else bd.insertAdjacentHTML('beforeend', '<p class="empty">沒有肌肉蓋在它上面，直接位於皮膚與筋膜下方。</p>');
+    const h2 = document.createElement('h4'); h2.textContent = '它蓋住了這些肌肉（在它下面）'; bd.appendChild(h2);
+    if (m.covers.length) m.covers.forEach(([o, pc]) => bd.appendChild(relRow(o, pc)));
+    else bd.insertAdjacentHTML('beforeend', '<p class="empty">它下面沒有其他肌肉，直接貼著骨骼或內臟。</p>');
+    let note = '百分比的意思：從這塊肌肉表面往最近的皮膚看過去，有多少比例的面積會被那塊肌肉擋住。蓋住它的肌肉都拆掉後，它就露出來了。';
+    if (m.sheath) note += '<br><br>腹直肌前方由腹外斜肌、腹內斜肌的腱膜（腹直肌鞘）包覆。腱膜不是肌腹，所以不算「被肌肉蓋住」。';
+    if (m.fx) note += '<br><br>原始模型的斜方肌上部與下部名稱標反了，本頁已依實際位置更正。';
+    bd.insertAdjacentHTML('beforeend', `<div class="note">${note}</div>`);
+    card.querySelector('#cx').onclick = () => select(-1);
+    card.querySelector('#cf').onclick = () => { st.focus = !st.focus; apply(); renderCard(); };
+    card.querySelector('#cr').onclick = () => removeMuscle(st.sel);
+    card.querySelector('#cz').onclick = () => frame(st.sel);
+  }
+
+  function select(i, doFrame) {
+    st.sel = i;
+    if (i < 0) st.focus = false;
+    if (i >= 0 && st.removed.has(i)) st.removed.delete(i);
+    if (i >= 0 && st.layersOff.has(MU[i].layer) && !st.focus) st.layersOff.delete(MU[i].layer);
+    apply(); renderCard();
+    if (doFrame && i >= 0) frame(i, true);
+  }
+  function removeMuscle(i) {
+    st.removed.add(i); lastRemoved.push(i);
+    if (st.sel === i) { st.sel = -1; st.focus = false; renderCard(); }
+    apply();
+  }
+
+  // ---------- camera
+  let anim = null;
+  function tween(toPos, toTarget, ms = 550) {
+    const fp = camera.position.clone(), ft = controls.target.clone(), t0 = performance.now();
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    anim = now => {
+      const t = reduce ? 1 : Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - t, 3);
+      camera.position.lerpVectors(fp, toPos, e); controls.target.lerpVectors(ft, toTarget, e);
+      if (t >= 1) anim = null;
+    };
+  }
+  function frame(i, keepDir) {
+    const mesh = meshes[i], c = MU[i].center.clone().add(mesh.position);
+    const r = Math.max(mesh.geometry.boundingSphere.radius, 0.05);
+    const dir = keepDir ? camera.position.clone().sub(controls.target).normalize() : new THREE.Vector3(...MU[i].o);
+    tween(c.clone().addScaledVector(dir, Math.min(3.2, r * 5 + 0.35)), c);
+  }
+  const VIEWS = { front: [0, 0, 1], back: [0, 0, -1], left: [1, 0, 0], right: [-1, 0, 0] };
+  document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => {
+    const t = new THREE.Vector3(0, 0.9, 0); tween(t.clone().addScaledVector(new THREE.Vector3(...VIEWS[b.dataset.view]), 3.6), t);
+  });
+  camera.position.set(0, 0.9, 3.6); controls.target.set(0, 0.9, 0);
+
+  // ---------- toolbar
+  document.querySelectorAll('[data-color]').forEach(b => b.onclick = () => {
+    st.color = b.dataset.color; document.querySelectorAll('[data-color]').forEach(x => x.classList.toggle('on', x === b)); paint();
+  });
+  document.querySelectorAll('[data-side]').forEach(b => b.onclick = () => {
+    st.side = b.dataset.side; document.querySelectorAll('[data-side]').forEach(x => x.classList.toggle('on', x === b)); apply();
+  });
+  $('#bones').onclick = e => { boneMesh.visible = !boneMesh.visible; e.currentTarget.classList.toggle('on', boneMesh.visible); };
+  $('#explode').oninput = e => { st.explode = e.target.value / 100; apply(); };
+
+  // ---------- picking
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  function pick(ev) {
+    const r = canvas.getBoundingClientRect();
+    ndc.set((ev.clientX - r.left) / r.width * 2 - 1, -(ev.clientY - r.top) / r.height * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const vis = meshes.filter(m => m.visible && !m.material.transparent);
+    const hit = ray.intersectObjects(vis, false)[0];
+    return hit ? hit.object.userData.i : -1;
+  }
+  let down = null, lastTap = 0, lastIdx = -2;
+  canvas.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+  canvas.addEventListener('pointerup', e => {
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+    const i = pick(e), now = performance.now();
+    if (i >= 0 && i === lastIdx && now - lastTap < 350) { removeMuscle(i); lastIdx = -2; return; }
+    lastTap = now; lastIdx = i;
+    if (i >= 0) select(i, false); else if (st.sel >= 0 && !st.focus) select(-1);
+  });
+  addEventListener('keydown', e => {
+    if (e.target.matches('input')) return;
+    if (e.key === 'Escape') select(-1);
+    if ((e.key === 'Delete' || e.key === 'Backspace') && st.sel >= 0) removeMuscle(st.sel);
+  });
+
+  // ---------- loop
+  function resize() {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (canvas.width !== Math.round(w * renderer.getPixelRatio()) || canvas.height !== Math.round(h * renderer.getPixelRatio())) {
+      renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    }
+  }
+  function loop(now) { resize(); if (anim) anim(now); controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
+  paint(); apply(); renderCard();
+  requestAnimationFrame(loop);
+  window.__atlas = { MU, select, st };
+})();
+</script>
