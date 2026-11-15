@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.15.47">
+<meta name="salary-page-version" content="2026.11.16.48">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1043,9 +1043,9 @@ function renderDaily() {
       <div class="btns" style="margin-top:12px"><button class="btn sm danger" id="clearDay">清除這一天</button></div>
     </div>
     <div class="daysum">
+      <div><span>張數</span><b>${dc.net}${day.ded ? `<small style="font-size:11px;opacity:.8">(${dc.count})</small>` : ''}</b></div>
       <div><span>時數</span><b>${fix(dc.hours, 2)}</b></div>
       <div><span>勞點</span><b>${fix(dc.lp, 2)}</b></div>
-      <div><span>業績</span><b>$${fmt(dc.perf)}</b></div>
       <div><span>實抽</span><b>$${fmt(dc.pay)}</b></div>
     </div>`;
   const stripEl = $('#dayStrip'), sel = $('#dayStrip .sel');
