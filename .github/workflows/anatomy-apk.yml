@@ -1,5 +1,5 @@
 # 肌肉圖譜 Android App：anatomy/ 有變動時，自動在 GitHub 打包 APK。
-# 打包好的 APK 會出現在該次執行的「Artifacts」區，下載解壓縮後即可安裝。
+# 打包好的 APK 會存成 anatomy/muscle-atlas.apk（直接點開下載），也會出現在該次執行的「Artifacts」區。
 name: 肌肉圖譜 APK
 
 on:
@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -38,3 +38,12 @@ jobs:
           name: muscle-atlas-apk
           path: anatomy/muscle-atlas.apk
           if-no-files-found: error
+
+      - name: 把 APK 存進 repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add anatomy/muscle-atlas.apk
+          if git diff --cached --quiet; then echo "APK 沒有變動"; exit 0; fi
+          git commit -m "Update muscle-atlas.apk"
+          git push
