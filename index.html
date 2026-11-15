@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.16.48">
+<meta name="salary-page-version" content="2026.11.16.49">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -441,7 +441,13 @@ const DEFAULT_SERVICES = [
   { id: 'g560', name: 'G5局部60', price: 1400, factor: 1,       high: 790,  low: 730,  hidden: true },
   { id: 'qy60', name: '輕盈60',   price: 1600, factor: 1,       high: 905,  low: 835,  hidden: true },
   { id: 'nw50', name: '暖宮50',   price: 1600, factor: 0.83333, high: 905,  low: 835,  hidden: true },
+  // 過年加價：工作單上印的名稱就是這個項目的名稱（例如「過年+100」），每年金額可能不同，使用者自己在設定改名稱和抽成
+  { id: 'ny',   name: '過年+100', price: 100,  factor: 0,       high: 50,   low: 50,   hidden: true, addon: true },
 ];
+// 加價項目（過年+N）：有抽成、算業績，但不是一張勞作單——不算張數、時數、勞點、支援次數，也不算一位客人（不扣人頭）。
+// 用名稱開頭判斷也算，Excel 匯入或使用者改名（過年+200）後還認得
+const isAddon = s => !!s && (!!s.addon || /^過年/.test(s.name || ''));
+const ADDON_RE = /過\s*年|年\s*[+＋]\s*\d/;
 // 把程式內建的價目表併入使用者的價目表：只更新價格、補上新項目（預設隱藏），
 // 不動使用者的顯示勾選、順序、自訂項目，也不會加回使用者刪掉的項目
 function syncDefaults() {
@@ -789,8 +795,8 @@ function dayCalc(svcs, day, high) {
     for (const s of svcs) {
       const c = day.c[s.id]; if (!c) continue;
       const n = c[0] + c[1] + c[2];
-      count += n;
-      hours += n * s.factor;                           // 當天的勞作時數（全部種類；跟月結算「總時數」同一種算法）
+      if (!isAddon(s)) count += n;
+      hours += n * s.factor;                          // 當天的勞作時數（全部種類；跟月結算「總時數」同一種算法）
       lp += c[0] * s.factor;
       perf += n * s.price;
       pay += n * (high ? s.high : s.low);
@@ -822,7 +828,7 @@ function calcMonth(k) {
   let count = 0, support = 0;
   per.forEach(p => {
     p.total = p.tri[0] + p.tri[1] + p.tri[2];
-    count += p.total; support += p.tri[2];
+    if (!isAddon(p.s)) { count += p.total; support += p.tri[2]; }
     lp += p.tri[0] * p.s.factor;
     hoursRaw += p.total * p.s.factor;
     supHours += p.tri[2] * p.s.factor;
@@ -1752,6 +1758,8 @@ function guessService(raw) {
   const name = normSlipName(raw);
   const learned = (state.slipMap || {})[name];
   if (learned && state.services.some(s => s.id === learned)) return learned;
+  // 過年加價：單上印「過年+100」（金額每年可能不同），對到價目表裡的過年項目
+  if (ADDON_RE.test(name)) { const a = state.services.find(isAddon); if (a) return a.id; }
   const mm = /(\d{2,3})分/.exec(name), hh = /(\d(?:\.\d)?)[Hh小]/.exec(name);
   const min = mm ? +mm[1] : hh ? Math.round(+hh[1] * 60) : 0;
   const byName = n => (state.services.find(s => s.name === n) || {}).id || null;
@@ -1787,9 +1795,9 @@ function slotMin(raw) {
 // （「足浴+肩頸」只要讀到 浴、+、肩、頸 任一個就是肩/刮；足蒸類交給整行比對）
 const slotCatGuess = raw => (([['蒸', /蒸/], ['肩', /[肩刮頸頚颈浴+]/], ['足體', /套餐|足.*[體身]/], ['體', /[體身油]|指\s*\//], ['足', /[足腳底]/]]
   .find(([, re]) => re.test(raw)) || [])[0]) || '';
-const slotCat = raw => { if (DOT_RE.test(raw)) return 'N' + DOT_I; const nm = nameMatch(raw); return nm ? 'N' + nm.i : slotCatGuess(raw); };
-// 品名線索＋分鐘數 → 項目
-const partsService = (ct, mn) => ct[0] === 'N' ? nameService(+ct.slice(1), mn) : guessService(ct + mn + '分');
+const slotCat = raw => { if (DOT_RE.test(raw)) return 'N' + DOT_I; if (ADDON_RE.test(raw)) return 'A'; const nm = nameMatch(raw); return nm ? 'N' + nm.i : slotCatGuess(raw); };
+// 品名線索＋分鐘數 → 項目（A＝過年加價，不看分鐘數）
+const partsService = (ct, mn) => ct === 'A' ? (state.services.find(isAddon) || {}).id || null : ct[0] === 'N' ? nameService(+ct.slice(1), mn) : guessService(ct + mn + '分');
 // 解析辨識結果：日期（民國年）、時間、編號、種類（勞點／支援標記）、品項與數量
 function parseSlip(result) {
   const rows = slipRows(result).map(r => r.replace(/[：]/g, ':').replace(/[－—]/g, '-'));
@@ -1929,8 +1937,9 @@ function openScanSheet(p) {
 // 確認畫面的品名：對到項目就顯示單上印的完整品名（「多特青油」→「多特瑞精油」、「指/油安摩90分」→「指/油壓按摩90分」），
 // 對不到才顯示辨識原文（原文都還在「辨識到的文字」裡）
 function printedName(raw, svc) {
-  const sname = svc === DOT ? DOT : (state.services.find(s => s.id === svc) || {}).name;
+  const sv = state.services.find(s => s.id === svc), sname = svc === DOT ? DOT : (sv || {}).name;
   if (!sname) return '';
+  if (isAddon(sv)) return sname;                         // 過年加價：單上印的就是項目名稱
   const cands = SLIP_NAMES.map(([st, opts], i) => ({ st, i, min: Object.keys(opts).find(m => opts[m] === sname) })).filter(c => c.min != null);
   if (!cands.length) return '';
   // 同一個項目有兩種印法（肩/刮30：足浴+肩頸、刮痧服務），挑跟讀到的字最像的
@@ -1994,7 +2003,7 @@ function addScan() {
   const prev = p.no ? slipRecorded(date, key) : null;
   if (prev) removeSlip(k, d, key);                      // 同編號：先把舊的那張扣掉（張數、扣人頭、多特瑞）
   // 一張單是一位客人：多個項目、或同項目 X2 以上，多出來的自動扣人頭（總數量 − 1；多特瑞不算）
-  const ded = Math.max(0, picks.reduce((a, x) => a + x.qty, 0) - 1);
+  const ded = Math.max(0, picks.reduce((a, x) => a + (isAddon(state.services.find(s => s.id === x.pref)) ? 0 : x.qty), 0) - 1);   // 過年加價也不算
   if (ded) day.ded = toNum(day.ded) + ded;
   const added = [];
   for (const { it, pref, id, qty } of picks) {
@@ -2174,7 +2183,7 @@ window.onSlipFrame = json => {
     const [sk, sc] = topOf(Object.fromEntries(Object.entries(box).filter(([k]) => k[0] !== '?')));
     const [uk, uc] = topOf(Object.fromEntries(Object.entries(box).filter(([k]) => k[0] === '?')));
     // 品名＋分鐘數各自投票；只有一種分鐘數的品名（例如刮痧服務 30 分），品名確認就夠了
-    const single = ct && ct[0] === 'N' && Object.keys(SLIP_NAMES[+ct.slice(1)][1]).length === 1;
+    const single = ct === 'A' || (ct && ct[0] === 'N' && Object.keys(SLIP_NAMES[+ct.slice(1)][1]).length === 1);
     const byParts = ct && (mn || single) ? partsService(ct, +mn || 0) : null;
     const whole = sc >= 2, parts = !!byParts && cc >= 2 && (mc >= 2 || single);
     const svc = whole ? sk : parts ? byParts : sk || byParts || null;
@@ -2220,7 +2229,7 @@ const SlipOcr = (() => {
   // 店裡新增品項只要加進 SLIP_NAMES，這裡會自動跟著認得
   const SLIP_WORDS = '師傅服務單包廂箱日期編號會員門市指定支援加點重印刷卡現金付款轉帳分小時鐘套餐精油';
   function slipCharIndexes() {
-    const chars = new Set([...SLIP_WORDS, ...SLIP_NAMES.map(([st]) => st).join(''), ...Object.keys(SIMP), ...Object.values(SIMP).join(''),
+    const chars = new Set([...SLIP_WORDS, ...SLIP_NAMES.map(([st]) => st).join(''), ...'過年', ...state.services.map(s => s.name).join(''), ...Object.keys(SIMP), ...Object.values(SIMP).join(''),
       ...'0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:：-－—()（）+＋/.,，×*#◆♦◇ ']);
     const idx = [];
     keys.forEach((k, i) => { if (chars.has(k)) idx.push(i + 1); });   // 輸出第 0 格是「空白（CTC blank）」，字從第 1 格開始
