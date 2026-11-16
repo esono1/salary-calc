@@ -9,6 +9,8 @@ import { buildSkeleton, muscleWeights, segmentOf, SEGMENTS } from './rig.mjs';
 import { buildAttachments } from './attach.mjs';
 import { functionOf } from './func.mjs';
 import { collectCT, relatedMuscles } from './ct.mjs';
+import { NERVE_ZH, innervationOf, lymphZh, lymphInfo, nerveInfo, cnsGroup } from './nerves.mjs';
+import { boneZh } from './attach.mjs';
 
 const QUALITY = process.env.Q || 'economy';
 const OUT = process.env.OUT || 'out';
@@ -32,6 +34,8 @@ await loadSystem('muscular', QUALITY);
 await loadSystem('skeletal', 'economy');
 await loadSystem('regions', 'economy');
 await loadSystem('insertions', 'economy');
+await loadSystem('nervous', 'economy');
+await loadSystem('lymphoid', 'economy');
 
 function weld(g, flagFn) {
   const map = new Map(), pos = [], flag = [], idx = new Uint32Array(g.idx.length);
@@ -231,6 +235,61 @@ const CT = collectCT({ manifest, en, meshes, ancestors, weld });
 CT.forEach(c => { c.w = muscleWeights(c.g, RIG.segBVH); c.rel = relatedMuscles(c.g, musB.bvh, vOwner, musIdx, M, c.side); });
 console.log('connective', CT.length, 'tris', CT.reduce((a, c) => a + c.g.idx.length / 3, 0));
 
+// ---- nervous & lymphatic systems
+const { MeshoptSimplifier: SIMP } = await import('meshoptimizer');
+await SIMP.ready;
+function simplify(g, ratio) {
+  const target = Math.max(300, Math.floor(g.idx.length / 3 * ratio)) * 3;
+  const [ix] = SIMP.simplify(g.idx, g.pos, 3, target, 0.003, []);
+  const remap = new Int32Array(g.pos.length / 3).fill(-1), pos = [], idx = new Uint32Array(ix.length);
+  for (let k = 0; k < ix.length; k++) { const v = ix[k]; if (remap[v] < 0) { remap[v] = pos.length / 3; pos.push(g.pos[v * 3], g.pos[v * 3 + 1], g.pos[v * 3 + 2]); } idx[k] = remap[v]; }
+  return { pos: new Float32Array(pos), idx };
+}
+function mergeGeoms(list) {
+  let n = 0, m = 0; for (const g of list) { n += g.pos.length; m += g.idx.length; }
+  const pos = new Float32Array(n), idx = new Uint32Array(m); let a = 0, c = 0;
+  for (const g of list) { pos.set(g.pos, a); for (let k = 0; k < g.idx.length; k++) idx[c + k] = g.idx[k] + a / 3; a += g.pos.length; c += g.idx.length; }
+  return { pos, idx };
+}
+const SYS = [];
+{
+  const cns = new Map();
+  for (const s of manifest.structures) {
+    if (s.kind !== 'structure' || !s.meshes || (s.system !== 'nervous' && s.system !== 'lymphoid')) continue;
+    const raw = meshes.get(s.meshes[0]); if (!raw) continue;
+    const path = ancestors(s).join(' ');
+    const name = (en[s.id]?.name || s.id).replace(/^\((.*)\)$/, '$1');
+    const side = s.side === 'left' ? 'L' : s.side === 'right' ? 'R' : '';
+    if (s.system === 'lymphoid') { SYS.push({ en: name, zh: lymphZh(name), k: 'l', side, info: lymphInfo(name), g: weld(raw) }); continue; }
+    if (/sense_organs/.test(path)) continue;
+    if (/central_nervous_system/.test(path)) {
+      const grp = cnsGroup(name, path); if (!grp) continue;
+      if (!cns.has(grp)) cns.set(grp, []); cns.get(grp).push(weld(raw)); continue;
+    }
+    SYS.push({ en: name, zh: NERVE_ZH[name] || name, k: 'n', side, info: nerveInfo(name), g: weld(raw) });
+  }
+  for (const [grp, list] of cns) {
+    let g = mergeGeoms(list);
+    if (grp !== 'Spinal cord') g = simplify(g, grp === 'Cerebrum' ? 0.3 : 0.5);
+    SYS.push({ en: grp, zh: NERVE_ZH[grp], k: 'c', side: '', info: nerveInfo(grp), g });
+  }
+  // innervation: nerve -> muscles (same side)
+  const innOf = M.map(m => innervationOf(m.en));
+  SYS.forEach(x => {
+    x.inn = x.k === 'n' ? M.map((m, i) => (innOf[i]?.keys.includes(x.en) && (!x.side || !m.side || m.side === x.side)) ? i : -1).filter(i => i >= 0) : [];
+    x.w = muscleWeights(x.g, RIG.segBVH);
+  });
+  M.forEach((m, i) => { m.nerve = innOf[i]?.zh || ''; });
+  console.log('nerves/lymph', SYS.length, 'tris', SYS.reduce((a, x) => a + x.g.idx.length / 3, 0), 'missing zh', [...new Set(SYS.filter(x => x.zh === x.en).map(x => x.en))]);
+}
+// ---- bones: names + muscles attached to each bone
+const BONES = boneParts.map(b => ({ en: b.name, zh: boneZh(b.name), side: b.side === 'left' ? 'L' : b.side === 'right' ? 'R' : '', o: new Set(), n: new Set() }));
+const boneKey = new Map(); BONES.forEach((b, k) => boneKey.set(b.en + '|' + b.side, k));
+for (const pt of ATT.patches) for (const mi of pt.mus) for (const bn of pt.bones) {
+  const side = M[mi].side; const k = boneKey.get(bn + '|' + side) ?? boneKey.get(bn + '|');
+  if (k != null) (pt.type ? BONES[k].n : BONES[k].o).add(mi);
+}
+
 // ---- write binary
 const bb = new THREE.Box3();
 for (let i = 0; i < allM.pos.length; i += 3) bb.expandByPoint(p.fromArray(allM.pos, i));
@@ -244,13 +303,15 @@ const meta = {
   attribution: 'Z-Anatomy (CC BY-SA 4.0), based on BodyParts3D © DBCLS; glTF conversion by Svitylo 3D Anatomy Atlas data 1.2.0',
   muscles: M.map(m => ({
     id: m.id.replace('muscular.', ''), zh: m.zh, en: m.en, la: m.la, side: m.side, region: REGION_ORDER.indexOf(m.region), layer: m.layer,
-    exposed: Math.round(m.exposed * 100), a: functionOf(m.en)?.acts || [], org: ATT.summary[M.indexOf(m)].o, ins: ATT.summary[M.indexOf(m)].n, fn: functionOf(m.en)?.text || '', o: m.out, fx: m.fixed || 0, sheath: IGN.has(M.indexOf(m)) ? 1 : 0, tendon: m.allTendon ? 1 : 0,
+    exposed: Math.round(m.exposed * 100), a: functionOf(m.en)?.acts || [], nerve: m.nerve, org: ATT.summary[M.indexOf(m)].o, ins: ATT.summary[M.indexOf(m)].n, fn: functionOf(m.en)?.text || '', o: m.out, fx: m.fixed || 0, sheath: IGN.has(M.indexOf(m)) ? 1 : 0, tendon: m.allTendon ? 1 : 0,
     cb: m.coveredBy.map(x => [x[0], Math.round(x[1] * 100), Math.round(x[2] * 100)]),
     nv: m.g.pos.length / 3, ni: m.g.idx.length,
     p: push(q(m.g.pos)), i: push(Uint16Array.from(m.g.idx)), f: push(m.g.flag), w: push(m.w),
   })),
 };
-meta.bone = { nv: bone.pos.length / 3, ni: bone.idx.length, p: push(q(bone.pos)), i: push(bone.idx), s: push(bone.seg) };
+meta.bone = { nv: bone.pos.length / 3, ni: bone.idx.length, p: push(q(bone.pos)), i: push(bone.idx), s: push(bone.seg), b: push(bone.sid) };
+meta.bones = BONES.map(b => ({ zh: b.zh, en: b.en, side: b.side, o: [...b.o], n: [...b.n] }));
+meta.sys = SYS.map(x => ({ zh: x.zh, en: x.en, k: x.k, side: x.side, info: x.info, inn: x.inn, nv: x.g.pos.length / 3, ni: x.g.idx.length, u32: x.g.pos.length / 3 > 65535 ? 1 : 0, p: push(q(x.g.pos)), i: push(x.g.pos.length / 3 > 65535 ? Uint32Array.from(x.g.idx) : Uint16Array.from(x.g.idx)), w: push(x.w) }));
 meta.skel = RIG.skel;
 meta.att = ATT.patches.map(pt => ({ m: pt.mus, t: pt.type, s: pt.seg, nv: pt.g.pos.length / 3, ni: pt.g.idx.length, p: push(q(pt.g.pos)), i: push(Uint16Array.from(pt.g.idx)) }));
 meta.ct = CT.map(c => ({ zh: c.zh, en: c.en, k: c.kind, side: c.side, info: c.info, rel: c.rel, nv: c.g.pos.length / 3, ni: c.g.idx.length, u32: c.g.pos.length / 3 > 65535 ? 1 : 0, p: push(q(c.g.pos)), i: push(c.g.pos.length / 3 > 65535 ? Uint32Array.from(c.g.idx) : Uint16Array.from(c.g.idx)), w: push(c.w) }));

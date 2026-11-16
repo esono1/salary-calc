@@ -102,10 +102,11 @@ export function buildSkeleton(boneStructs) {
 
   // merged bone geometry with per-vertex segment
   let nv = 0, ni = 0; for (const b of boneStructs) { nv += b.g.pos.length / 3; ni += b.g.idx.length; }
-  const pos = new Float32Array(nv * 3), idx = new Uint32Array(ni), seg = new Uint8Array(nv);
+  const pos = new Float32Array(nv * 3), idx = new Uint32Array(ni), seg = new Uint8Array(nv), sid = new Uint16Array(nv);
   const segGeoms = SEGMENTS.map(() => []);
   let pv = 0, pi = 0;
-  for (const b of boneStructs) {
+  for (const [bk, b] of boneStructs.entries()) {
+    sid.fill(bk, pv, pv + b.g.pos.length / 3);
     const si = SEG_INDEX.get(segmentOf(b.name, b.side));
     pos.set(b.g.pos, pv * 3); for (let k = 0; k < b.g.idx.length; k++) idx[pi + k] = b.g.idx[k] + pv;
     seg.fill(si, pv, pv + b.g.pos.length / 3);
@@ -121,7 +122,7 @@ export function buildSkeleton(boneStructs) {
     geo.computeBoundingBox();
     return { bvh: new MeshBVH(geo), box: geo.boundingBox };
   });
-  return { skel, bone: { pos, idx, seg }, segBVH };
+  return { skel, bone: { pos, idx, seg, sid }, segBVH };
 }
 
 /** Skin weights for one muscle geometry: Uint8Array(nv*8) = 4 segment indices + 4 weights (0..255) */
