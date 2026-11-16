@@ -2189,7 +2189,9 @@ footer.credit a { color: inherit; }
     try {
       const res = await fetch(HD_URL);
       if (!res.ok) throw new Error(res.status);
-      const buf = await new Response(res.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+      // .bin = gzip 原始檔；.txt = 同一份 gzip 的 base64（給只能放文字檔的地方用）
+      const gz = HD_URL.endsWith('.txt') ? new Blob([Uint8Array.from(atob((await res.text()).trim()), c => c.charCodeAt(0))]).stream() : res.body;
+      const buf = await new Response(gz.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
       const len = new DataView(buf).getUint32(0, true);
       const list = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, len)));
       const base = 4 + len + ((4 - (4 + len) % 4) % 4);
