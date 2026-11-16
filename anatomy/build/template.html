@@ -106,6 +106,14 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 .move.on .ic { background: #fff; color: var(--accent); }
 .move:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .card .fn { margin: 0; font-size: 13px; line-height: 1.7; }
+.card .fn a { color: var(--accent); }
+.chipline { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chipline .ch { display: inline-flex; align-items: center; font-size: 12px; background: var(--bg); border-radius: 999px; padding: 3px 10px; }
+.chipline .ch .pin { margin-right: 5px; }
+.ctabs { display: flex; gap: 2px; margin: 12px -16px -10px; padding: 0 12px; border-top: 1px solid var(--line); }
+.ctabs button { flex: 1; border: 0; background: none; font: inherit; font-size: 13px; color: var(--muted); padding: 10px 4px 9px; cursor: pointer; border-bottom: 2px solid transparent; }
+.ctabs button.on { color: var(--fg); font-weight: 700; border-bottom-color: var(--accent); }
+.ctabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .card .fn.att b { font-weight: 700; }
 .card .fn.muted { color: var(--muted); font-size: 12px; margin-top: 6px; }
 .pin { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
@@ -160,9 +168,16 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 .hint h2 { font-family: var(--font-head); font-size: 17px; margin: 0 0 6px; }
 .hint ul { margin: 0; padding-left: 18px; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+.ld { display: grid; gap: 10px; justify-items: center; width: min(260px, 70%); }
+.ldbar { width: 100%; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.ldbar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
 footer.credit { font-size: 10.5px; color: var(--muted); padding: 8px 16px 12px max(16px, env(safe-area-inset-left, 0px)); border-top: 1px solid var(--line); line-height: 1.5; }
 footer.credit a { color: inherit; }
 
+.ctxleg { position: absolute; left: 12px; bottom: 118px; z-index: 4; display: flex; flex-wrap: wrap; gap: 4px 10px; max-width: 46%; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font-size: 12px; box-shadow: var(--shadow); }
+.ctxleg[hidden] { display: none !important; }
+.ctxleg span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.ctxleg i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .mbar, .sheet-x, .scrim, .sec-h, .vcluster, .tabs, .io, .about { display: none; }
 .vbtns { display: inline-flex; gap: 2px; }
 .toast { position: absolute; left: 50%; transform: translateX(-50%); bottom: 120px; z-index: 45; display: flex; align-items: center; gap: 12px; background: var(--fg); color: var(--bg); border-radius: 10px; padding: 9px 10px 9px 14px; font-size: 13px; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
@@ -188,6 +203,8 @@ footer.credit a { color: inherit; }
   .toast { top: calc(64px + env(safe-area-inset-top, 0px)); bottom: auto; max-width: calc(100% - 120px); }
   .update { top: calc(64px + env(safe-area-inset-top, 0px)); left: 10px; right: 64px; transform: none; max-width: none; }
   .io { display: inline; font-size: 11px; color: var(--muted); flex: none; }
+  .ctxleg { top: calc(64px + env(safe-area-inset-top, 0px)); bottom: auto; left: max(10px, env(safe-area-inset-left, 0px)); max-width: calc(100% - 80px); }
+  body.card-open .ctxleg, .toast:not([hidden]) ~ .ctxleg { top: calc(64px + env(safe-area-inset-top, 0px)); }
   main.stage { position: fixed; inset: 0; }
   .mbar { display: flex; position: absolute; z-index: 5; top: calc(8px + env(safe-area-inset-top, 0px)); left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); gap: 6px; align-items: center; }
   .desk-only { display: none !important; }
@@ -283,7 +300,7 @@ footer.credit a { color: inherit; }
       <button class="fab" id="fabTurn" aria-label="轉到下一個方向（前、右、後、左）"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg></button>
       <button class="fab" id="fabHome" aria-label="回到正面全身"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 7v7M8 10h8M9 21l3-7 3 7"/></svg></button>
     </div>
-    <div class="loading" id="loading">正在載入模型…</div>
+    <div class="loading" id="loading"><div class="ld"><span id="ldTxt">正在載入模型…</span><div class="ldbar"><i id="ldBar"></i></div></div></div>
     <div class="toolbar" id="toolbar" data-sec="layers">
       <div class="sheet-head mobile-only"><span id="sheetTitle">圖層</span><button class="btn sheet-x" data-close aria-label="關閉">✕</button></div>
 
@@ -292,7 +309,7 @@ footer.credit a { color: inherit; }
         <span class="lab">組織</span>
         <button class="btn" id="bones">骨骼</button><button class="btn" id="bonesOnly">只看骨骼</button>
         <button class="btn" data-ct="0">筋膜</button><button class="btn" data-ct="1">滑液囊</button><button class="btn" data-ct="2">腱鞘</button>
-        <button class="btn" data-sys="n">神經</button><button class="btn" data-sys="l">淋巴</button>
+        <button class="btn" data-sys="n">神經</button><button class="btn" data-sys="b">血管</button><button class="btn" data-sys="o">內臟</button><button class="btn" data-sys="l">淋巴</button>
       </div>
       <h5 class="sec-h" data-sec="layers">左右</h5>
       <div class="grp" role="group" aria-label="左右" data-sec="layers">
@@ -359,6 +376,7 @@ footer.credit a { color: inherit; }
     <div class="card" id="card" hidden></div>
     <div class="update" id="upd" hidden></div>
     <div class="toast" id="toast" hidden></div>
+    <div class="ctxleg" id="ctxLeg" hidden aria-live="polite"></div>
     <div class="scrim" id="scrim" hidden></div>
     <nav class="tabs" aria-label="主要功能">
       <button data-tab="model" class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M7 9l5 2 5-2M9 21l3-7 3 7"/></svg>模型</button>
@@ -373,13 +391,15 @@ footer.credit a { color: inherit; }
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
 <script id="meta" type="application/json">__META__</script>
-<script id="geo" type="application/octet-stream">__GEO__</script>
+__GEO__
 <script>
 (async function () {
   const META = JSON.parse(document.getElementById('meta').textContent);
   const MU = META.muscles;
   const NL = Math.max(...MU.map(m => m.layer));
   const $ = s => document.querySelector(s);
+  // 顏色規則：青綠 = 選取；紅 = 收縮（主要）／起點；橘 = 輔助；紫 = 被拉長；藍 = 止點
+  const SEL_COL = '#2bb3a3', SEL_EMI = '#0e6b61';
   const css = getComputedStyle(document.documentElement);
   const tok = n => css.getPropertyValue(n).trim();
   const layerHex = l => tok('--L' + Math.min(l, 6));
@@ -389,7 +409,9 @@ footer.credit a { color: inherit; }
   // ---------- decode geometry
   let bytes;
   try {
-    const b64 = document.getElementById('geo').textContent.trim();
+    const b64 = window.__parts ? window.__parts.join('') : document.getElementById('geo').textContent.trim();
+    $('#ldTxt').textContent = '正在建立模型…'; $('#ldBar').style.width = '100%';
+    await new Promise(r => setTimeout(r, 30));
     const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
     const ds = new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'));
     bytes = await new Response(ds).arrayBuffer();
@@ -472,7 +494,7 @@ footer.credit a { color: inherit; }
   const BONEN = META.bones || [];
   const boneSid = new Uint16Array(bytes, META.bone.b, META.bone.nv);
   function paintBones() {
-    const arr = boneMesh.geometry.attributes.color.array, base = new THREE.Color(tok('--bone')), hi = new THREE.Color('#5fb3d9');
+    const arr = boneMesh.geometry.attributes.color.array, base = new THREE.Color(tok('--bone')), hi = new THREE.Color(SEL_COL);
     for (let v = 0; v < boneSid.length; v++) { const c = boneSid[v] === st.bone ? hi : base; arr[v * 3] = c.r; arr[v * 3 + 1] = c.g; arr[v * 3 + 2] = c.b; }
     boneMesh.geometry.attributes.color.needsUpdate = true;
   }
@@ -489,7 +511,9 @@ footer.credit a { color: inherit; }
 
   // ---------- 神經（n 周邊、c 中樞）與淋巴（l）
   const SYS = META.sys || [];
-  const SYS_COL = { n: '#f2c94c', c: '#e8b4bd', l: '#76c46a' };
+  const SYS_COL = { n: '#f2c94c', c: '#e8b4bd', l: '#76c46a', a: '#d8433b', v: '#3f6fd1', o: '#d79a86' };
+  // 圖層開關：n 神經（含中樞）、l 淋巴、b 血管（動脈＋靜脈）、o 內臟
+  const layerOf = k => k === 'l' ? 'l' : (k === 'a' || k === 'v') ? 'b' : k === 'o' ? 'o' : 'n';
   const sysMeshes = SYS.map((c, k) => {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(deq(c.p, c.nv), 3));
@@ -504,15 +528,15 @@ footer.credit a { color: inherit; }
     c.center = g.boundingSphere.center.clone(); c.radius = g.boundingSphere.radius;
     return mesh;
   });
-  const sysGroups = { n: [], l: [] };
-  { const by = new Map(); SYS.forEach((c, k) => { const t = c.k === 'l' ? 'l' : 'n', key = t + c.en; if (!by.has(key)) by.set(key, [t, []]); by.get(key)[1].push(k); });
+  const sysGroups = { n: [], l: [], b: [], o: [] };
+  { const by = new Map(); SYS.forEach((c, k) => { const t = layerOf(c.k), key = t + c.en; if (!by.has(key)) by.set(key, [t, []]); by.get(key)[1].push(k); });
     for (const [t, ix] of by.values()) sysGroups[t].push(ix);
     for (const t in sysGroups) sysGroups[t].sort((a, b) => (SYS[a[0]].k === 'c' ? -1 : 0) - (SYS[b[0]].k === 'c' ? -1 : 0) || SYS[a[0]].zh.localeCompare(SYS[b[0]].zh, 'zh-Hant')); }
   $('#loading').remove();
   $('#count').textContent = new Set(MU.map(m => m.en)).size + ' 種、' + MU.length;
 
   // ---------- state
-  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0, ct: -1, ctOn: [false, false, false], bone: -1, sys: -1, sysOn: { n: false, l: false }, quiz: null, mode: null, act: null, att: true, pose: {}, poseVals: {}, poseSide: 'R', pickSide: 'R' };
+  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0, ct: -1, ctOn: [false, false, false], bone: -1, sys: -1, sysOn: { n: false, l: false, b: false, o: false }, quiz: null, mode: null, act: null, att: true, pose: {}, poseVals: {}, poseSide: 'R', pickSide: 'R' };
 
   // ---------- 起點／止點：骨頭上的附著區塊（紅 = 起點，藍 = 止點），永遠畫在最上層
   const attMat = [
@@ -586,8 +610,8 @@ footer.credit a { color: inherit; }
       const ghost = i !== st.sel && ((rel && above.has(i)) || (inv && !inv.has(i)));
       mat.transparent = !!ghost; mat.opacity = ghost ? (inv ? 0.08 : 0.28) : 1; mat.depthWrite = !ghost;
       const role = inv && inv.has(i) ? (inv.get(i) ? 'p' : 'a') : '';
-      mat.color.set(i === st.sel ? '#5fb3d9' : role === 'p' ? '#ff8f8f' : role === 'a' ? '#ffd28a' : '#ffffff');
-      mat.emissive.set(i === st.sel ? '#1d6f9a' : role === 'p' ? '#a01c2c' : role === 'a' ? '#8a5a00' : '#000000');
+      mat.color.set(i === st.sel ? SEL_COL : role === 'p' ? '#ff8f8f' : role === 'a' ? '#ffd28a' : '#ffffff');
+      mat.emissive.set(i === st.sel ? SEL_EMI : role === 'p' ? '#a01c2c' : role === 'a' ? '#8a5a00' : '#000000');
       mat.emissiveIntensity = i === st.sel ? 0.5 : role ? 0.45 : 0;
       mesh.renderOrder = ghost ? 2 : 0;
       const k = st.explode * 0.05 * (NL + 1 - m.layer);
@@ -600,18 +624,18 @@ footer.credit a { color: inherit; }
     ctMeshes.forEach((mesh, k) => {
       const c = CTM[k], sel = k === st.ct;
       mesh.visible = sel || (st.ctOn[c.k] && (!st.side || c.side === st.side || !c.side));
-      mesh.material.color.set(sel ? '#5fb3d9' : CT_COL[c.k]);
+      mesh.material.color.set(sel ? SEL_COL : CT_COL[c.k]);
       mesh.material.opacity = sel ? 0.85 : CT_OP[c.k];
-      mesh.material.emissive.set(sel ? '#1d6f9a' : '#000000');
+      mesh.material.emissive.set(sel ? SEL_EMI : '#000000');
       mesh.material.emissiveIntensity = sel ? 0.5 : 0;
     });
     document.querySelectorAll('[data-ct]').forEach(b => b.classList.toggle('on', st.ctOn[+b.dataset.ct]));
     sysMeshes.forEach((mesh, k) => {
-      const c = SYS[k], sel = k === st.sys, layer = c.k === 'l' ? 'l' : 'n';
+      const c = SYS[k], sel = k === st.sys, layer = layerOf(c.k);
       mesh.visible = sel || (st.sysOn[layer] && (!st.side || c.side === st.side || !c.side));
-      mesh.material.color.set(sel ? '#5fb3d9' : SYS_COL[c.k]);
+      mesh.material.color.set(sel ? SEL_COL : SYS_COL[c.k]);
       mesh.material.depthTest = !sel; mesh.renderOrder = sel ? 11 : 0;
-      mesh.material.emissive.set(sel ? '#1d6f9a' : c.k === 'n' ? '#5a4300' : '#000000');
+      mesh.material.emissive.set(sel ? SEL_EMI : c.k === 'n' ? '#5a4300' : '#000000');
       mesh.material.emissiveIntensity = sel ? 0.6 : c.k === 'n' ? 0.35 : 0;
     });
     document.querySelectorAll('[data-sys]').forEach(b => b.classList.toggle('on', st.sysOn[b.dataset.sys]));
@@ -642,13 +666,30 @@ footer.credit a { color: inherit; }
           if (i === t) {
             mesh.visible = true; mat.transparent = false; mat.opacity = 1; mat.depthWrite = true;
             const good = qz.answered && qz.ok;
-            mat.color.set(good ? '#8fe3a0' : '#5fb3d9'); mat.emissive.set(good ? '#1e7a35' : '#1d6f9a'); mat.emissiveIntensity = 0.6;
+            mat.color.set(good ? '#8fe3a0' : SEL_COL); mat.emissive.set(good ? '#1e7a35' : SEL_EMI); mat.emissiveIntensity = 0.6;
           } else if (over.has(i) && mesh.visible) { mat.transparent = true; mat.opacity = 0.12; mat.depthWrite = false; mesh.renderOrder = 2; }
         });
       }
       if (qz.answered && !qz.ok && qz.picked >= 0 && qz.picked !== t) { const mat = meshes[qz.picked].material; mat.color.set('#ff9a9a'); mat.emissive.set('#a01c2c'); mat.emissiveIntensity = 0.55; }
     }
+    renderCtxLegend();
     renderChips(); renderList(); renderRemoved();
+  }
+
+  // 依目前狀態顯示需要的圖例
+  function renderCtxLegend() {
+    const items = [];
+    const dot = (c, t) => `<span><i style="background:${c}"></i>${t}</span>`;
+    if (st.mode === 'quiz') items.push(dot(SEL_COL, '題目'), dot('#2f9e55', '答對'), dot('#d64545', '點錯'));
+    else {
+      if (st.sel >= 0 || st.bone >= 0 || st.sys >= 0 || st.ct >= 0) items.push(dot(SEL_COL, '選取'));
+      if (play.key || st.act) { if (st.act) items.push(dot('#e25563', '主要'), dot('#e8a33a', '輔助')); else items.push(dot('#e25563', '收縮')); items.push(dot('#7d72e8', '被拉長')); }
+      if (st.sel >= 0 && st.att && attOf[st.sel].length) items.push(dot('#e5484d', '起點'), dot('#2f7de1', '止點'));
+      if (st.sysOn.b) items.push(dot(SYS_COL.a, '動脈'), dot(SYS_COL.v, '靜脈'));
+    }
+    const el = $('#ctxLeg');
+    el.hidden = items.length < 2;
+    el.innerHTML = items.join('');
   }
 
   // ---------- legend
@@ -752,7 +793,7 @@ footer.credit a { color: inherit; }
       });
     });
     // 神經、淋巴（有搜尋字或圖層打開時才列出）
-    for (const [t, title] of [['n', '神經'], ['l', '淋巴']]) {
+    for (const [t, title] of [['n', '神經'], ['b', '血管'], ['o', '內臟'], ['l', '淋巴']]) {
       if (!q && !st.sysOn[t]) continue;
       const items = sysGroups[t].filter(ix => { const c = SYS[ix[0]]; return !q || (c.zh + c.en).toLowerCase().includes(q) || title.includes(q); });
       if (!items.length) continue;
@@ -867,16 +908,18 @@ footer.credit a { color: inherit; }
     if (mode === 'action') return renderActionCard(card);
     if (mode === 'pose') return renderPose(card);
     const m = MU[st.sel];
+    const TABS = [['sum', '概要'], ['act', '動作'], ['att', '附著'], ['lay', '層次']];
+    if (!TABS.some(t => t[0] === st.cardTab)) st.cardTab = 'sum';
     card.innerHTML = `
       <div class="hd">
         <button class="btn x" id="cx" aria-label="關閉">✕</button>
         ${st.act ? `<button class="back" id="cback">← 回到「${actLabel(st.act)}」</button>` : ''}
         <h2>${label(m)}</h2>
-        <div class="sub">${m.en}${m.la ? '<br><i>' + m.la + '</i>' : ''}</div>
-        <div class="stats">
-          <div><small>層次</small><b>第 ${m.layer} 層</b></div>
-          <div><small>直接露在表面</small><b>${m.exposed}%</b></div>
-          <div><small>部位</small><b>${META.regions[m.region]}</b></div>
+        <div class="sub">${m.en}${m.la ? '　<i>' + m.la + '</i>' : ''}</div>
+        <div class="chipline">
+          <span class="ch"><span class="pin" style="background:${layerHex(m.layer)}"></span>第 ${m.layer} 層</span>
+          <span class="ch">露在表面 ${m.exposed}%</span>
+          <span class="ch">${META.regions[m.region]}</span>
         </div>
         <div class="moves" id="cmv"></div>
         <div class="acts">
@@ -885,47 +928,63 @@ footer.credit a { color: inherit; }
           <button class="btn" id="cr">隱藏</button>
           <button class="btn" id="cz">鏡頭對準</button>
         </div>
+        <div class="ctabs" role="tablist">${TABS.map(([k, t]) => `<button role="tab" aria-selected="${st.cardTab === k}" class="${st.cardTab === k ? 'on' : ''}" data-ct-tab="${k}">${t}</button>`).join('')}</div>
       </div>
-      <div class="bd" id="cbd"></div>`;
+      <div class="bd" id="cbd" role="tabpanel"></div>`;
     const bd = card.querySelector('#cbd');
     const mv = card.querySelector('#cmv');
-    if (m.a.length) {
-      m.a.forEach(k => {
-        const b = document.createElement('button');
-        const on = play.key === k && play.muscle === st.sel;
-        b.className = 'move' + (on ? ' on' : '');
-        b.innerHTML = `<span class="ic">${on ? '■' : '▶'}</span><span><b>${ACTIONS[k][0]}</b><small>${ACTIONS[k][1]}</small></span>`;
-        b.setAttribute('aria-pressed', on);
-        b.onclick = () => startAction(k, m.side, st.sel);
-        mv.appendChild(b);
-      });
+    m.a.forEach(k => {
+      const b = document.createElement('button');
+      const on = play.key === k && play.muscle === st.sel;
+      b.className = 'move' + (on ? ' on' : '');
+      b.innerHTML = `<span class="ic">${on ? '■' : '▶'}</span><span><b>${ACTIONS[k][0]}</b><small>${ACTIONS[k][1]}</small></span>`;
+      b.setAttribute('aria-pressed', on);
+      b.onclick = () => { if (!(play.key === k && play.muscle === st.sel)) st.cardTab = 'act'; startAction(k, m.side, st.sel); };
+      mv.appendChild(b);
+    });
+    const h4 = t => { const h = document.createElement('h4'); h.innerHTML = t; bd.appendChild(h); };
+    const tab = st.cardTab;
+    if (tab === 'sum') {
+      h4('功能');
+      bd.insertAdjacentHTML('beforeend', `<p class="fn">${m.fn || '—'}</p>`);
+      if (m.nerve) { h4('神經支配'); bd.insertAdjacentHTML('beforeend', `<p class="fn"><span class="pin" style="background:${SYS_COL.n}"></span>${m.nerve}</p>`); }
+      h4('起點與止點');
+      bd.insertAdjacentHTML('beforeend', (m.org.length || m.ins.length)
+        ? `<p class="fn att"><span class="pin o"></span><b>起點</b>　${m.org.join('、') || '—'}<br><span class="pin i"></span><b>止點</b>　${m.ins.join('、') || '—'}</p>`
+        : '<p class="fn muted">原始模型沒有這塊肌肉的附著點資料。</p>');
+      h4('層次');
+      bd.insertAdjacentHTML('beforeend', `<p class="fn">第 ${m.layer} 層，${m.cb.length ? '被 ' + m.cb.length + ' 塊肌肉蓋住' : '最外層、直接在皮膚下'}；${m.covers.length ? '蓋住 ' + m.covers.length + ' 塊肌肉' : '底下直接是骨頭或內臟'}。<a href="#" data-goto="lay">看清單</a></p>`);
+    } else if (tab === 'act') {
+      if (!m.a.length) bd.insertAdjacentHTML('beforeend', '<p class="fn muted">這塊肌肉沒有明顯的關節動作，所以不做擺動示範。</p>');
+      else if (!(play.key && play.muscle === st.sel)) bd.insertAdjacentHTML('beforeend', '<p class="fn muted">按上方的 ▶ 播放動作。播放時，<span class="pin p"></span>收縮的肌肉會鼓起，<span class="pin s"></span>被拉長的肌肉（拮抗肌）會列在這裡。</p>');
+      if (play.key && play.muscle === st.sel) {
+        const str = [...stretched(play.key, play.side).keys()];
+        h4(`<span class="pin s"></span>「${ACTIONS[play.key][0]}」時被拉長的肌肉（拮抗肌）· ${str.length}`);
+        if (str.length) str.sort((x, y) => MU[x].layer - MU[y].layer).forEach(o => bd.appendChild(relRow(o, 0, true)));
+        else bd.insertAdjacentHTML('beforeend', '<p class="empty">目前的資料裡沒有對應的拮抗肌。</p>');
+      }
+      h4('功能'); bd.insertAdjacentHTML('beforeend', `<p class="fn">${m.fn || '—'}</p>`);
+    } else if (tab === 'att') {
+      if (m.org.length || m.ins.length) {
+        bd.insertAdjacentHTML('beforeend', `<p class="fn att">
+          <span class="pin o"></span><b>起點</b>　${m.org.length ? m.org.join('、') : '—'}<br>
+          <span class="pin i"></span><b>止點</b>　${m.ins.length ? m.ins.join('、') : '—'}</p>
+          <p class="fn muted">${st.att ? '模型上紅色是起點、藍色是止點，會透過其他肌肉顯示出來。' : '按上方「起止點」可以在模型上標出附著位置。'}起點通常是收縮時不動的那一端。原始模型只標出長在骨頭上的附著點，附著在筋膜、腱膜或其他肌肉上的部分不會列出，所以有些肌肉的清單不完整。</p>`);
+      } else bd.insertAdjacentHTML('beforeend', '<p class="fn muted">原始模型沒有這塊肌肉的附著點資料。</p>');
+    } else {
+      h4('被這些肌肉蓋住（在它上面）');
+      if (m.cb.length) m.cb.forEach(([o, pc]) => bd.appendChild(relRow(o, pc)));
+      else bd.insertAdjacentHTML('beforeend', '<p class="empty">沒有肌肉蓋在它上面，直接位於皮膚與筋膜下方。</p>');
+      h4('它蓋住了這些肌肉（在它下面）');
+      if (m.covers.length) m.covers.forEach(([o, pc]) => bd.appendChild(relRow(o, pc)));
+      else bd.insertAdjacentHTML('beforeend', '<p class="empty">它下面沒有其他肌肉，直接貼著骨骼或內臟。</p>');
+      let note = '百分比的意思：從這塊肌肉表面往最近的皮膚看過去，有多少比例的面積會被那塊肌肉擋住。蓋住它的肌肉都拆掉後，它就露出來了。';
+      if (m.sheath) note += '<br><br>腹直肌前方由腹外斜肌、腹內斜肌的腱膜（腹直肌鞘）包覆。腱膜不是肌腹，所以不算「被肌肉蓋住」。';
+      if (m.fx) note += '<br><br>原始模型的斜方肌上部與下部名稱標反了，本頁已依實際位置更正。';
+      bd.insertAdjacentHTML('beforeend', `<div class="note">${note}</div>`);
     }
-    if (play.key && play.muscle === st.sel) {
-      const str = [...stretched(play.key, play.side).keys()];
-      const hs = document.createElement('h4'); hs.innerHTML = `<span class="pin s"></span>「${ACTIONS[play.key][0]}」時被拉長的肌肉（拮抗肌）· ${str.length}`; bd.appendChild(hs);
-      if (str.length) str.sort((x, y) => MU[x].layer - MU[y].layer).forEach(o => bd.appendChild(relRow(o, 0, true)));
-      else bd.insertAdjacentHTML('beforeend', '<p class="empty">目前的資料裡沒有對應的拮抗肌。</p>');
-    }
-    const hf = document.createElement('h4'); hf.textContent = '功能'; bd.appendChild(hf);
-    bd.insertAdjacentHTML('beforeend', `<p class="fn">${m.fn || '—'}${m.a.length ? '' : '<br><span class="muted">這塊肌肉沒有明顯的關節動作，所以不做擺動示範。</span>'}</p>`);
-    if (m.nerve) bd.insertAdjacentHTML('beforeend', `<p class="fn"><span class="pin" style="background:${SYS_COL.n}"></span><b>神經支配</b>　${m.nerve}</p>`);
-    const ha = document.createElement('h4'); ha.textContent = '起點與止點'; bd.appendChild(ha);
-    if (m.org.length || m.ins.length) {
-      bd.insertAdjacentHTML('beforeend', `<p class="fn att">
-        <span class="pin o"></span><b>起點</b>　${m.org.length ? m.org.join('、') : '—'}<br>
-        <span class="pin i"></span><b>止點</b>　${m.ins.length ? m.ins.join('、') : '—'}</p>
-        <p class="fn muted">${st.att ? '模型上紅色是起點、藍色是止點，會透過其他肌肉顯示出來。' : '按上方「起止點」可以在模型上標出附著位置。'}起點通常是收縮時不動的那一端。原始模型只標出長在骨頭上的附著點，附著在筋膜、腱膜或其他肌肉上的部分不會列出，所以有些肌肉的清單不完整。</p>`);
-    } else bd.insertAdjacentHTML('beforeend', '<p class="fn muted">原始模型沒有這塊肌肉的附著點資料。</p>');
-    const h1 = document.createElement('h4'); h1.textContent = '被這些肌肉蓋住（在它上面）'; bd.appendChild(h1);
-    if (m.cb.length) m.cb.forEach(([o, pc]) => bd.appendChild(relRow(o, pc)));
-    else bd.insertAdjacentHTML('beforeend', '<p class="empty">沒有肌肉蓋在它上面，直接位於皮膚與筋膜下方。</p>');
-    const h2 = document.createElement('h4'); h2.textContent = '它蓋住了這些肌肉（在它下面）'; bd.appendChild(h2);
-    if (m.covers.length) m.covers.forEach(([o, pc]) => bd.appendChild(relRow(o, pc)));
-    else bd.insertAdjacentHTML('beforeend', '<p class="empty">它下面沒有其他肌肉，直接貼著骨骼或內臟。</p>');
-    let note = '百分比的意思：從這塊肌肉表面往最近的皮膚看過去，有多少比例的面積會被那塊肌肉擋住。蓋住它的肌肉都拆掉後，它就露出來了。';
-    if (m.sheath) note += '<br><br>腹直肌前方由腹外斜肌、腹內斜肌的腱膜（腹直肌鞘）包覆。腱膜不是肌腹，所以不算「被肌肉蓋住」。';
-    if (m.fx) note += '<br><br>原始模型的斜方肌上部與下部名稱標反了，本頁已依實際位置更正。';
-    bd.insertAdjacentHTML('beforeend', `<div class="note">${note}</div>`);
+    card.querySelectorAll('[data-ct-tab]').forEach(b => b.onclick = () => { st.cardTab = b.dataset.ctTab; renderCard(); });
+    const gl = card.querySelector('[data-goto]'); if (gl) gl.onclick = e => { e.preventDefault(); st.cardTab = gl.dataset.goto; renderCard(); };
     card.querySelector('#cx').onclick = () => { if (st.act) { st.act = null; stopAction(true); } select(-1); };
     if (st.act) card.querySelector('#cback').onclick = () => select(-1);
     card.querySelector('#ca').onclick = () => { st.att = !st.att; apply(); renderCard(); };
@@ -1005,7 +1064,8 @@ footer.credit a { color: inherit; }
     fill('[data-o]', so); fill('[data-n]', sn);
     card.querySelector('[data-x]').onclick = () => selectBone(-1);
   }
-  const SYS_KIND = { n: '周邊神經', c: '中樞神經', l: '淋巴系統' };
+  const SYS_KIND = { n: '周邊神經', c: '中樞神經', l: '淋巴系統', a: '動脈', v: '靜脈', o: '內臟器官' };
+  const LAYER_NAME = { n: '神經', l: '淋巴', b: '血管', o: '內臟' };
   function renderSysCard(card) {
     const c = SYS[st.sys];
     const isSensory = c.k === 'n' && !c.inn.length && /cutaneous|digital|Saphenous|Sural|Mental|Lingual|Infrapatellar|Cochlear|Vestibul|Optic|Olfactory|alveolar|Chorda|Ophthalmic|Maxillary|Sensory root|ganglion|Posterior root/i.test(c.en);
@@ -1016,13 +1076,13 @@ footer.credit a { color: inherit; }
         <div class="sub">${c.en}</div>
         <div class="stats">
           <div><small>種類</small><b><span class="pin" style="background:${SYS_COL[c.k]}"></span>${SYS_KIND[c.k]}</b></div>
-          <div><small>顯示全部${c.k === 'l' ? '淋巴' : '神經'}</small><b><button class="btn ${st.sysOn[c.k === 'l' ? 'l' : 'n'] ? 'on' : ''}" data-tog style="padding:2px 10px">${st.sysOn[c.k === 'l' ? 'l' : 'n'] ? '開' : '關'}</button></b></div>
+          <div><small>顯示全部${LAYER_NAME[layerOf(c.k)]}</small><b><button class="btn ${st.sysOn[layerOf(c.k)] ? 'on' : ''}" data-tog style="padding:2px 10px">${st.sysOn[layerOf(c.k)] ? '開' : '關'}</button></b></div>
         </div>
       </div>
       <div class="bd">
         <h4>功能</h4><p class="fn">${c.info}</p>
         ${c.k === 'n' ? `<h4>支配的肌肉 · ${c.inn.length}</h4><div data-inn></div>` : ''}
-        <div class="note">${c.k === 'l' ? '淋巴結在原始模型中是一群一群的小圓點，同一個名稱常包含好幾顆。' : '神經支配依一般解剖學教科書整理；個體之間會有差異，部分肌肉由多條神經共同支配。'}</div>
+        <div class="note">${c.k === 'l' ? '淋巴結在原始模型中是一群一群的小圓點，同一個名稱常包含好幾顆。' : (c.k === 'a' || c.k === 'v') ? '紅色是動脈、藍色是靜脈（血管圖層的慣用顏色，和肌肉的收縮顏色無關）。' : c.k === 'o' ? '內臟位於肌肉和骨骼內側，要先剝掉外層肌肉或用「只看骨骼」才看得到。' : '神經支配依一般解剖學教科書整理；個體之間會有差異，部分肌肉由多條神經共同支配。'}</div>
       </div>`;
     if (c.k === 'n') {
       const el = card.querySelector('[data-inn]');
@@ -1030,7 +1090,7 @@ footer.credit a { color: inherit; }
       else el.innerHTML = `<p class="empty">${isSensory ? '這是感覺神經（或神經根），主要傳遞感覺，不直接支配肌肉。' : '這條是神經的主幹或分支，它支配的肌肉列在它的末端分支上。'}</p>`;
     }
     card.querySelector('[data-x]').onclick = () => selectSys(-1);
-    card.querySelector('[data-tog]').onclick = () => { const t = c.k === 'l' ? 'l' : 'n'; st.sysOn[t] = !st.sysOn[t]; apply(); renderCard(); };
+    card.querySelector('[data-tog]').onclick = () => { const t = layerOf(c.k); st.sysOn[t] = !st.sysOn[t]; apply(); renderCard(); };
   }
   // ---------- 筋膜／滑液囊／腱鞘的資訊卡
   const CT_KIND = ['筋膜', '滑液囊', '腱鞘'];
