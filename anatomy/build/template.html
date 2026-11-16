@@ -82,6 +82,10 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 .update button { border: 0; background: rgba(255,255,255,.2); color: #fff; border-radius: 6px; padding: 3px 8px; cursor: pointer; }
 .removed { margin-top: 8px; font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 
+.grab { display: none; flex: none; height: 22px; cursor: ns-resize; touch-action: none; position: relative; }
+.grab::after { content: ""; position: absolute; left: 50%; top: 8px; width: 40px; height: 5px; margin-left: -20px; border-radius: 3px; background: var(--line); }
+.grab:hover::after, .grab:focus-visible::after { background: var(--muted); }
+.grab:focus-visible { outline: none; }
 .card { position: absolute; right: 12px; top: 64px; bottom: 12px; width: 330px; max-width: calc(100% - 24px); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; }
 .card .hd { padding: 14px 16px 12px; border-bottom: 1px solid var(--line); }
 .card .hd .x { float: right; margin: -4px -6px 0 0; }
@@ -106,7 +110,7 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 .card .fn.muted { color: var(--muted); font-size: 12px; margin-top: 6px; }
 .pin { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
 .pin.o { background: #e5484d; } .pin.i { background: #2f7de1; }
-.pin.p { background: #e25563; margin-left: 4px; } .pin.a { background: #e8a33a; margin-left: 4px; }
+.pin.p { background: #e25563; margin-left: 4px; } .pin.a { background: #e8a33a; margin-left: 4px; } .pin.s { background: #7d72e8; margin-left: 4px; }
 .back { display: block; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12px; padding: 0 0 6px; cursor: pointer; }
 .back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .seg { display: inline-flex; align-items: center; gap: 2px; margin-top: 10px; background: var(--bg); border-radius: 9px; padding: 3px; }
@@ -120,6 +124,16 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 .pk small { display: block; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pk.sm { padding: 6px 4px; text-align: center; }
 .pk.sm b { font-size: 12px; font-weight: 500; }
+.qz { font-size: 15px; margin: 6px 0 10px; line-height: 1.6; }
+.qopts { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.qopts select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+.qopts .muted { color: var(--muted); }
+.pk.good { border-color: #2f9e55; background: color-mix(in srgb, #2f9e55 18%, var(--bg)); }
+.pk.bad { border-color: #d64545; background: color-mix(in srgb, #d64545 18%, var(--bg)); }
+.pk.dim { opacity: 0.5; }
+.verdict { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.6; }
+.verdict.good { background: color-mix(in srgb, #2f9e55 16%, var(--bg)); }
+.verdict.bad { background: color-mix(in srgb, #d64545 14%, var(--bg)); }
 .sl { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(0, 1fr) 3.2em; gap: 8px; align-items: center; font-size: 12px; padding: 3px 0; }
 .sl span { color: var(--muted); }
 .sl input { width: 100%; accent-color: var(--accent); }
@@ -190,7 +204,9 @@ footer.credit a { color: inherit; }
   .removed { display: none !important; }
   body.card-open .legend { display: none; }
 
-  .card { position: fixed; top: auto; left: 0; right: 0; bottom: 0; width: auto; max-width: none; max-height: 48dvh; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 20; }
+  .card { position: fixed; top: auto; left: 0; right: 0; bottom: 0; width: auto; max-width: none; height: 48dvh; max-height: 88dvh; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 20; }
+  .card .grab { display: block; }
+  .card.dragging { transition: none; user-select: none; }
   .card .hd { padding: 12px 16px 10px; }
   .card h2 { font-size: 19px; }
   .card .sub { font-size: 11px; }
@@ -253,13 +269,17 @@ footer.credit a { color: inherit; }
         <span class="lab">結締組織</span>
         <button class="btn" data-ct="0">筋膜</button><button class="btn" data-ct="1">滑液囊</button><button class="btn" data-ct="2">腱鞘</button>
       </div>
+      <div class="grp" role="group" aria-label="神經與淋巴">
+        <span class="lab">系統</span>
+        <button class="btn" data-sys="n">神經</button><button class="btn" data-sys="l">淋巴</button>
+      </div>
       <div class="grp" role="group" aria-label="模型精細度">
         <span class="lab">模型</span>
         <button class="btn on" data-q="std">標準</button><button class="btn" data-q="hd" id="hdBtn">精細</button>
       </div>
-      <div class="grp desk-only" role="group" aria-label="工具">
+      <div class="grp" role="group" aria-label="工具">
         <span class="lab">工具</span>
-        <button class="btn" data-tool="pick">動作查詢</button><button class="btn" data-tool="pose">擺姿勢</button>
+        <button class="btn" data-tool="pick">動作查詢</button><button class="btn" data-tool="pose">擺姿勢</button><button class="btn" data-tool="quiz">測驗</button>
       </div>
     </div>
     <div class="legend">
@@ -382,15 +402,57 @@ footer.credit a { color: inherit; }
     for (let v = 0; v < b.nv; v++) { si[v * 4] = seg[v]; sws[v * 4] = 1; }
     g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
     g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
-    boneMesh = new THREE.SkinnedMesh(g, new THREE.MeshStandardMaterial({ color: tok('--bone'), roughness: 0.8 }));
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(b.nv * 3), 3));
+    boneMesh = new THREE.SkinnedMesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 }));
+    boneMesh.userData.bone = true;
     group.add(boneMesh); skin(boneMesh);
     boneMesh.visible = false;
   }
+  // ---------- 骨頭：每個頂點屬於哪一塊骨頭，用來點選和標亮
+  const BONEN = META.bones || [];
+  const boneSid = new Uint16Array(bytes, META.bone.b, META.bone.nv);
+  function paintBones() {
+    const arr = boneMesh.geometry.attributes.color.array, base = new THREE.Color(tok('--bone')), hi = new THREE.Color('#5fb3d9');
+    for (let v = 0; v < boneSid.length; v++) { const c = boneSid[v] === st.bone ? hi : base; arr[v * 3] = c.r; arr[v * 3 + 1] = c.g; arr[v * 3 + 2] = c.b; }
+    boneMesh.geometry.attributes.color.needsUpdate = true;
+  }
+  const boneGroups = (() => {
+    const by = new Map();
+    BONEN.forEach((b, k) => { if (/tooth|incisor|canine|premolar|molar|Incus|Malleus|Stapes|cells of ethmoid|Sinus of/.test(b.en)) return; if (!by.has(b.en)) by.set(b.en, []); by.get(b.en).push(k); });
+    return [...by.values()];
+  })();
+  const boneCenter = k => {
+    const pos = boneMesh.geometry.attributes.position.array, c = new THREE.Vector3(); let n = 0;
+    for (let v = 0; v < boneSid.length; v += 3) if (boneSid[v] === k) { c.x += pos[v * 3]; c.y += pos[v * 3 + 1]; c.z += pos[v * 3 + 2]; n++; }
+    return n ? c.multiplyScalar(1 / n) : new THREE.Vector3(0, 1, 0);
+  };
+
+  // ---------- 神經（n 周邊、c 中樞）與淋巴（l）
+  const SYS = META.sys || [];
+  const SYS_COL = { n: '#f2c94c', c: '#e8b4bd', l: '#76c46a' };
+  const sysMeshes = SYS.map((c, k) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(deq(c.p, c.nv), 3));
+    g.setIndex(new THREE.BufferAttribute(c.u32 ? new Uint32Array(bytes, c.i, c.ni) : new Uint16Array(bytes, c.i, c.ni), 1));
+    g.computeVertexNormals(); g.computeBoundingSphere();
+    const sw = new Uint8Array(bytes, c.w, c.nv * 8), si = new Uint16Array(c.nv * 4), sws = new Float32Array(c.nv * 4);
+    for (let v = 0; v < c.nv; v++) for (let j = 0; j < 4; j++) { si[v * 4 + j] = sw[v * 8 + j]; sws[v * 4 + j] = sw[v * 8 + 4 + j] / 255; }
+    g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+    g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
+    const mesh = new THREE.SkinnedMesh(g, new THREE.MeshStandardMaterial({ color: SYS_COL[c.k], roughness: 0.45, side: THREE.DoubleSide }));
+    mesh.userData.sys = k; group.add(mesh); skin(mesh); mesh.visible = false;
+    c.center = g.boundingSphere.center.clone(); c.radius = g.boundingSphere.radius;
+    return mesh;
+  });
+  const sysGroups = { n: [], l: [] };
+  { const by = new Map(); SYS.forEach((c, k) => { const t = c.k === 'l' ? 'l' : 'n', key = t + c.en; if (!by.has(key)) by.set(key, [t, []]); by.get(key)[1].push(k); });
+    for (const [t, ix] of by.values()) sysGroups[t].push(ix);
+    for (const t in sysGroups) sysGroups[t].sort((a, b) => (SYS[a[0]].k === 'c' ? -1 : 0) - (SYS[b[0]].k === 'c' ? -1 : 0) || SYS[a[0]].zh.localeCompare(SYS[b[0]].zh, 'zh-Hant')); }
   $('#loading').remove();
   $('#count').textContent = new Set(MU.map(m => m.en)).size + ' 種、' + MU.length;
 
   // ---------- state
-  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0, ct: -1, ctOn: [false, false, false], mode: null, act: null, att: true, pose: {}, poseVals: {}, poseSide: 'R', pickSide: 'R' };
+  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0, ct: -1, ctOn: [false, false, false], bone: -1, sys: -1, sysOn: { n: false, l: false }, quiz: null, mode: null, act: null, att: true, pose: {}, poseVals: {}, poseSide: 'R', pickSide: 'R' };
 
   // ---------- 起點／止點：骨頭上的附著區塊（紅 = 起點，藍 = 止點），永遠畫在最上層
   const attMat = [
@@ -483,6 +545,46 @@ footer.credit a { color: inherit; }
       mesh.material.emissiveIntensity = sel ? 0.5 : 0;
     });
     document.querySelectorAll('[data-ct]').forEach(b => b.classList.toggle('on', st.ctOn[+b.dataset.ct]));
+    sysMeshes.forEach((mesh, k) => {
+      const c = SYS[k], sel = k === st.sys, layer = c.k === 'l' ? 'l' : 'n';
+      mesh.visible = sel || (st.sysOn[layer] && (!st.side || c.side === st.side || !c.side));
+      mesh.material.color.set(sel ? '#5fb3d9' : SYS_COL[c.k]);
+      mesh.material.depthTest = !sel; mesh.renderOrder = sel ? 11 : 0;
+      mesh.material.emissive.set(sel ? '#1d6f9a' : c.k === 'n' ? '#5a4300' : '#000000');
+      mesh.material.emissiveIntensity = sel ? 0.6 : c.k === 'n' ? 0.35 : 0;
+    });
+    document.querySelectorAll('[data-sys]').forEach(b => b.classList.toggle('on', st.sysOn[b.dataset.sys]));
+    if (st.bone >= 0) {
+      boneMesh.visible = true;
+      // 選骨頭時肌肉變半透明，才看得到標亮的骨頭
+      meshes.forEach(mesh => { if (!mesh.visible) return; const mat = mesh.material; mat.transparent = true; mat.opacity = 0.14; mat.depthWrite = false; mesh.renderOrder = 2; });
+    }
+    $('#bones').classList.toggle('on', boneMesh.visible);
+    // 播放動作時：被拉長的肌肉（拮抗肌）標成紫色
+    const str = play.key ? stretched(play.key, play.side) : null;
+    if (str) MU.forEach((m, i) => {
+      if (!str.has(i) || i === st.sel) return;
+      const mesh = meshes[i], mat = mesh.material;
+      if (st.act) { mesh.visible = true; mat.transparent = false; mat.opacity = 1; mat.depthWrite = true; mesh.renderOrder = 0; }
+      mat.color.set('#c9c2ff'); mat.emissive.set('#3b2fa8'); mat.emissiveIntensity = 0.5;
+    });
+    // 測驗：認名字時標亮題目、讓蓋住它的肌肉變透明；作答後標出正解（綠）和點錯的（紅）
+    const qz = st.mode === 'quiz' && st.quiz && st.quiz.target >= 0 ? st.quiz : null;
+    if (qz) {
+      const t = qz.target, show = qz.type === 'name' || qz.answered;
+      if (show) {
+        const over = new Set(MU[t].cb.map(x => x[0]));
+        MU.forEach((m, i) => {
+          const mesh = meshes[i], mat = mesh.material;
+          if (i === t) {
+            mesh.visible = true; mat.transparent = false; mat.opacity = 1; mat.depthWrite = true;
+            const good = qz.answered && qz.ok;
+            mat.color.set(good ? '#8fe3a0' : '#5fb3d9'); mat.emissive.set(good ? '#1e7a35' : '#1d6f9a'); mat.emissiveIntensity = 0.6;
+          } else if (over.has(i) && mesh.visible) { mat.transparent = true; mat.opacity = 0.12; mat.depthWrite = false; mesh.renderOrder = 2; }
+        });
+      }
+      if (qz.answered && !qz.ok && qz.picked >= 0 && qz.picked !== t) { const mat = meshes[qz.picked].material; mat.color.set('#ff9a9a'); mat.emissive.set('#a01c2c'); mat.emissiveIntensity = 0.55; }
+    }
     renderChips(); renderList(); renderRemoved();
   }
 
@@ -586,6 +688,36 @@ footer.credit a { color: inherit; }
         frag.appendChild(b);
       });
     });
+    // 神經、淋巴（有搜尋字或圖層打開時才列出）
+    for (const [t, title] of [['n', '神經'], ['l', '淋巴']]) {
+      if (!q && !st.sysOn[t]) continue;
+      const items = sysGroups[t].filter(ix => { const c = SYS[ix[0]]; return !q || (c.zh + c.en).toLowerCase().includes(q) || title.includes(q); });
+      if (!items.length) continue;
+      const h = document.createElement('h3'); h.textContent = title + ' · ' + items.length; frag.appendChild(h);
+      items.forEach(ix => {
+        const c = SYS[ix[0]], pickK = ix.find(k => SYS[k].side === (st.side || 'R')) ?? ix[0];
+        const b = document.createElement('button');
+        b.className = 'row' + (ix.includes(st.sys) ? ' on' : '');
+        b.innerHTML = `<span class="dot" style="background:${SYS_COL[c.k]}"></span><span class="nm"><b>${c.zh}</b><small>${c.en}</small></span><span class="lv">${SYS_KIND[c.k].slice(0, 2)}</span>`;
+        b.onclick = () => { closeSheets(); if (!st.sysOn[t]) st.sysOn[t] = true; selectSys(ix.includes(st.sys) && ix.length > 1 ? ix.find(k => k !== st.sys) : pickK, true); };
+        frag.appendChild(b);
+      });
+    }
+    // 骨頭（有搜尋字時才列出）
+    if (q) {
+      const items = boneGroups.filter(ix => { const b = BONEN[ix[0]]; return (b.zh + b.en).toLowerCase().includes(q) || '骨頭骨骼'.includes(q); });
+      if (items.length) {
+        const h = document.createElement('h3'); h.textContent = '骨頭 · ' + items.length; frag.appendChild(h);
+        items.slice(0, 60).forEach(ix => {
+          const b0 = BONEN[ix[0]], pickK = ix.find(k => BONEN[k].side === (st.side || 'R')) ?? ix[0];
+          const b = document.createElement('button');
+          b.className = 'row' + (ix.includes(st.bone) ? ' on' : '');
+          b.innerHTML = `<span class="dot" style="background:var(--bone)"></span><span class="nm"><b>${b0.zh}</b><small>${b0.en}</small></span><span class="lv">骨</span>`;
+          b.onclick = () => { closeSheets(); selectBone(ix.includes(st.bone) && ix.length > 1 ? ix.find(k => k !== st.bone) : pickK, true); };
+          frag.appendChild(b);
+        });
+      }
+    }
     // 筋膜、滑液囊、腱鞘
     for (const [kind, title] of [[0, '筋膜與支持帶'], [1, '滑液囊'], [2, '腱鞘']]) {
       const items = ctGroups[kind].filter(ix => { const c = CTM[ix[0]]; return !q || (c.zh + c.en).toLowerCase().includes(q) || title.includes(q); });
@@ -607,22 +739,67 @@ footer.credit a { color: inherit; }
   $('#q').addEventListener('input', renderList);
 
   // ---------- card
-  function relRow(i, pc) {
+  function relRow(i, pc, layerOnly) {
     const m = MU[i];
     const b = document.createElement('button'); b.className = 'rel';
-    b.innerHTML = `<span class="dot" style="background:${layerHex(m.layer)}"></span><span class="nm">${label(m)}</span><span class="bar"><span style="width:${pc}%"></span></span><span class="pc">${pc}%</span>`;
+    b.innerHTML = layerOnly
+      ? `<span class="dot" style="background:${layerHex(m.layer)}"></span><span class="nm">${label(m)}</span><span class="pc" style="grid-column: span 2">第 ${m.layer} 層</span>`
+      : `<span class="dot" style="background:${layerHex(m.layer)}"></span><span class="nm">${label(m)}</span><span class="bar"><span style="width:${pc}%"></span></span><span class="pc">${pc}%</span>`;
     b.title = `第 ${m.layer} 層`;
     b.onclick = () => select(i, true);
     return b;
   }
-  function renderCard() {
+  // ---------- 手機：資訊視窗可拖曳調整高度（點把手收合／展開）
+  let cardH = null;
+  try { cardH = +localStorage.getItem('atlas-card-h') || null; } catch (e) {}
+  const CARD_MIN = 72;
+  const cardMax = () => Math.round(innerHeight * 0.88);
+  function applyCardH() {
     const card = $('#card');
-    const mode = st.sel >= 0 ? 'muscle' : st.ct >= 0 ? 'ct' : st.mode === 'pick' ? 'pick' : st.act ? 'action' : st.mode === 'pose' ? 'pose' : null;
+    if (innerWidth > 820 || card.hidden) { card.style.height = ''; return; }
+    card.style.height = cardH ? Math.max(CARD_MIN, Math.min(cardMax(), cardH)) + 'px' : '';
+  }
+  function decorateCard() {
+    const card = $('#card');
+    if (card.hidden || card.querySelector('.grab')) { applyCardH(); return; }
+    const h = document.createElement('div');
+    h.className = 'grab'; h.setAttribute('role', 'separator'); h.setAttribute('aria-label', '拖曳調整視窗高度，點一下收合或展開'); h.tabIndex = 0;
+    card.prepend(h);
+    let y0 = 0, h0 = 0, moved = false;
+    h.addEventListener('pointerdown', e => { y0 = e.clientY; h0 = card.offsetHeight; moved = false; h.setPointerCapture(e.pointerId); card.classList.add('dragging'); });
+    h.addEventListener('pointermove', e => {
+      if (!h.hasPointerCapture(e.pointerId)) return;
+      const dy = y0 - e.clientY; if (Math.abs(dy) > 4) moved = true;
+      cardH = Math.max(CARD_MIN, Math.min(cardMax(), h0 + dy)); applyCardH();
+    });
+    const end = e => {
+      if (!h.hasPointerCapture(e.pointerId)) return;
+      h.releasePointerCapture(e.pointerId); card.classList.remove('dragging');
+      if (!moved) cardH = card.offsetHeight > CARD_MIN + 20 ? CARD_MIN : Math.round(innerHeight * 0.5);
+      applyCardH();
+      try { localStorage.setItem('atlas-card-h', String(cardH)); } catch (e2) {}
+    };
+    h.addEventListener('pointerup', end); h.addEventListener('pointercancel', end);
+    h.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp') cardH = card.offsetHeight + 60; else if (e.key === 'ArrowDown') cardH = card.offsetHeight - 60;
+      else if (e.key === 'Enter' || e.key === ' ') cardH = card.offsetHeight > CARD_MIN + 20 ? CARD_MIN : Math.round(innerHeight * 0.5); else return;
+      e.preventDefault(); applyCardH();
+    });
+    applyCardH();
+  }
+  addEventListener('resize', () => applyCardH());
+  function renderCard() { renderCardInner(); decorateCard(); }
+  function renderCardInner() {
+    const card = $('#card');
+    const mode = st.mode === 'quiz' ? 'quiz' : st.sel >= 0 ? 'muscle' : st.ct >= 0 ? 'ct' : st.bone >= 0 ? 'bone' : st.sys >= 0 ? 'sys' : st.mode === 'pick' ? 'pick' : st.act ? 'action' : st.mode === 'pose' ? 'pose' : null;
     document.body.classList.toggle('card-open', !!mode);
     document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', (b.dataset.tool === 'pick' && (mode === 'pick' || mode === 'action')) || (b.dataset.tool === 'pose' && mode === 'pose')));
     if (!mode) { card.hidden = true; $('#hint').hidden = false; return; }
     $('#hint').hidden = true; card.hidden = false;
+    if (mode === 'quiz') return renderQuiz(card);
     if (mode === 'ct') return renderCTCard(card);
+    if (mode === 'bone') return renderBoneCard(card);
+    if (mode === 'sys') return renderSysCard(card);
     if (mode === 'pick') return renderPicker(card);
     if (mode === 'action') return renderActionCard(card);
     if (mode === 'pose') return renderPose(card);
@@ -660,8 +837,15 @@ footer.credit a { color: inherit; }
         mv.appendChild(b);
       });
     }
+    if (play.key && play.muscle === st.sel) {
+      const str = [...stretched(play.key, play.side).keys()];
+      const hs = document.createElement('h4'); hs.innerHTML = `<span class="pin s"></span>「${ACTIONS[play.key][0]}」時被拉長的肌肉（拮抗肌）· ${str.length}`; bd.appendChild(hs);
+      if (str.length) str.sort((x, y) => MU[x].layer - MU[y].layer).forEach(o => bd.appendChild(relRow(o, 0, true)));
+      else bd.insertAdjacentHTML('beforeend', '<p class="empty">目前的資料裡沒有對應的拮抗肌。</p>');
+    }
     const hf = document.createElement('h4'); hf.textContent = '功能'; bd.appendChild(hf);
     bd.insertAdjacentHTML('beforeend', `<p class="fn">${m.fn || '—'}${m.a.length ? '' : '<br><span class="muted">這塊肌肉沒有明顯的關節動作，所以不做擺動示範。</span>'}</p>`);
+    if (m.nerve) bd.insertAdjacentHTML('beforeend', `<p class="fn"><span class="pin" style="background:${SYS_COL.n}"></span><b>神經支配</b>　${m.nerve}</p>`);
     const ha = document.createElement('h4'); ha.textContent = '起點與止點'; bd.appendChild(ha);
     if (m.org.length || m.ins.length) {
       bd.insertAdjacentHTML('beforeend', `<p class="fn att">
@@ -690,7 +874,7 @@ footer.credit a { color: inherit; }
   function select(i, doFrame) {
     if (play.key && play.muscle >= 0 && i !== play.muscle) stopAction(true);
     if (i >= 0 && st.mode === 'pick') st.mode = null;
-    if (i >= 0) st.ct = -1;
+    if (i >= 0) { st.ct = -1; clearOther(); }
     st.sel = i;
     if (i < 0) st.focus = false;
     if (i >= 0 && st.removed.has(i)) st.removed.delete(i);
@@ -698,10 +882,98 @@ footer.credit a { color: inherit; }
     apply(); renderCard();
     if (doFrame && i >= 0) frame(i, true);
   }
+  // 一次只選一樣：肌肉／筋膜／骨頭／神經淋巴
+  function clearOther() {
+    const hadBone = st.bone >= 0;
+    st.bone = -1; st.sys = -1;
+    if (st.mode === 'quiz') st.mode = null;
+    if (hadBone) paintBones();
+  }
+  function selectBone(k, doFrame) {
+    if (play.muscle >= 0) stopAction(true);
+    st.sel = -1; st.ct = -1; st.sys = -1; st.focus = false;
+    if (st.mode === 'pick' || st.mode === 'quiz') st.mode = null;
+    st.bone = k; paintBones();
+    if (k >= 0) boneMesh.visible = true;
+    apply(); renderCard();
+    if (doFrame && k >= 0) {
+      const c = boneCenter(k), dir = camera.position.clone().sub(controls.target).normalize();
+      tween(c.clone().addScaledVector(dir, Math.min(3.2, 0.7 / Math.sqrt(viewShift().vis))), c);
+    }
+  }
+  function selectSys(k, doFrame) {
+    if (play.muscle >= 0) stopAction(true);
+    const hadBone = st.bone >= 0;
+    st.sel = -1; st.ct = -1; st.bone = -1; st.focus = false;
+    if (hadBone) paintBones();
+    if (st.mode === 'pick' || st.mode === 'quiz') st.mode = null;
+    st.sys = k;
+    apply(); renderCard();
+    if (doFrame && k >= 0) {
+      const c = SYS[k], dir = camera.position.clone().sub(controls.target).normalize();
+      tween(c.center.clone().addScaledVector(dir, Math.min(3.2, (Math.min(c.radius, 0.5) * 3.5 + 0.35) / Math.sqrt(viewShift().vis))), c.center.clone());
+    }
+  }
+  const muscleRow = (i, extra) => {
+    const m = MU[i], b = document.createElement('button'); b.className = 'rel';
+    b.innerHTML = `<span class="dot" style="background:${layerHex(m.layer)}"></span><span class="nm">${label(m)}</span><span class="pc" style="grid-column: span 2">${extra || '第 ' + m.layer + ' 層'}</span>`;
+    b.onclick = () => select(i, true);
+    return b;
+  };
+  function renderBoneCard(card) {
+    const b = BONEN[st.bone];
+    const so = [...b.o].sort((x, y) => MU[x].layer - MU[y].layer), sn = [...b.n].sort((x, y) => MU[x].layer - MU[y].layer);
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" data-x aria-label="關閉">✕</button>
+        <h2>${b.zh}${b.side ? '（' + SIDE_ZH[b.side] + '）' : ''}</h2>
+        <div class="sub">${b.en}</div>
+        <div class="stats">
+          <div><small>從這裡出發</small><b>${so.length} 塊肌肉</b></div>
+          <div><small>止於這裡</small><b>${sn.length} 塊肌肉</b></div>
+        </div>
+      </div>
+      <div class="bd">
+        <h4><span class="pin o"></span>以這塊骨頭為起點的肌肉</h4><div data-o></div>
+        <h4><span class="pin i"></span>止於這塊骨頭的肌肉</h4><div data-n></div>
+        <div class="note">清單來自原始模型的附著點資料，只包含直接長在骨頭上的部分；附著在筋膜或腱膜上的肌肉不會列出。</div>
+      </div>`;
+    const fill = (sel, list) => { const el = card.querySelector(sel); if (list.length) list.forEach(i => el.appendChild(muscleRow(i))); else el.innerHTML = '<p class="empty">沒有資料。</p>'; };
+    fill('[data-o]', so); fill('[data-n]', sn);
+    card.querySelector('[data-x]').onclick = () => selectBone(-1);
+  }
+  const SYS_KIND = { n: '周邊神經', c: '中樞神經', l: '淋巴系統' };
+  function renderSysCard(card) {
+    const c = SYS[st.sys];
+    const isSensory = c.k === 'n' && !c.inn.length && /cutaneous|digital|Saphenous|Sural|Mental|Lingual|Infrapatellar|Cochlear|Vestibul|Optic|Olfactory|alveolar|Chorda|Ophthalmic|Maxillary|Sensory root|ganglion|Posterior root/i.test(c.en);
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" data-x aria-label="關閉">✕</button>
+        <h2>${c.zh}${c.side ? '（' + SIDE_ZH[c.side] + '）' : ''}</h2>
+        <div class="sub">${c.en}</div>
+        <div class="stats">
+          <div><small>種類</small><b><span class="pin" style="background:${SYS_COL[c.k]}"></span>${SYS_KIND[c.k]}</b></div>
+          <div><small>顯示全部${c.k === 'l' ? '淋巴' : '神經'}</small><b><button class="btn ${st.sysOn[c.k === 'l' ? 'l' : 'n'] ? 'on' : ''}" data-tog style="padding:2px 10px">${st.sysOn[c.k === 'l' ? 'l' : 'n'] ? '開' : '關'}</button></b></div>
+        </div>
+      </div>
+      <div class="bd">
+        <h4>功能</h4><p class="fn">${c.info}</p>
+        ${c.k === 'n' ? `<h4>支配的肌肉 · ${c.inn.length}</h4><div data-inn></div>` : ''}
+        <div class="note">${c.k === 'l' ? '淋巴結在原始模型中是一群一群的小圓點，同一個名稱常包含好幾顆。' : '神經支配依一般解剖學教科書整理；個體之間會有差異，部分肌肉由多條神經共同支配。'}</div>
+      </div>`;
+    if (c.k === 'n') {
+      const el = card.querySelector('[data-inn]');
+      if (c.inn.length) c.inn.forEach(i => el.appendChild(muscleRow(i)));
+      else el.innerHTML = `<p class="empty">${isSensory ? '這是感覺神經（或神經根），主要傳遞感覺，不直接支配肌肉。' : '這條是神經的主幹或分支，它支配的肌肉列在它的末端分支上。'}</p>`;
+    }
+    card.querySelector('[data-x]').onclick = () => selectSys(-1);
+    card.querySelector('[data-tog]').onclick = () => { const t = c.k === 'l' ? 'l' : 'n'; st.sysOn[t] = !st.sysOn[t]; apply(); renderCard(); };
+  }
   // ---------- 筋膜／滑液囊／腱鞘的資訊卡
   const CT_KIND = ['筋膜', '滑液囊', '腱鞘'];
   function selectCT(k, doFrame) {
     if (play.muscle >= 0) stopAction(true);
+    if (k >= 0) { const hb = st.bone >= 0; st.bone = -1; st.sys = -1; if (st.mode === 'quiz') st.mode = null; if (hb) paintBones(); }
     st.ct = k;
     if (k >= 0) { st.sel = -1; st.focus = false; if (st.mode === 'pick') st.mode = null; }
     apply(); renderCard();
@@ -791,24 +1063,33 @@ footer.credit a { color: inherit; }
     const r = canvas.getBoundingClientRect();
     ndc.set((ev.clientX - r.left) / r.width * 2 - 1, -(ev.clientY - r.top) / r.height * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    const vis = meshes.filter(m => m.visible && !m.material.transparent).concat(ctMeshes.filter(m => m.visible));
+    const quizFind = st.mode === 'quiz' && st.quiz && st.quiz.type === 'find';
+    const vis = meshes.filter(m => m.visible && !m.material.transparent)
+      .concat(quizFind ? [] : ctMeshes.filter(m => m.visible), quizFind ? [] : sysMeshes.filter(m => m.visible), !quizFind && boneMesh.visible ? [boneMesh] : []);
     const hit = ray.intersectObjects(vis, false)[0];
     if (!hit) return -1;
-    return hit.object.userData.ct != null ? 100000 + hit.object.userData.ct : hit.object.userData.i;
+    const u = hit.object.userData;
+    if (u.ct != null) return 100000 + u.ct;
+    if (u.sys != null) return 300000 + u.sys;
+    if (u.bone) return 200000 + boneSid[boneMesh.geometry.index.array[hit.faceIndex * 3]];
+    return u.i;
   }
   let down = null, lastTap = 0, lastIdx = -2;
   canvas.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
   canvas.addEventListener('pointerup', e => {
     if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
     const i = pick(e), now = performance.now();
+    if (st.mode === 'quiz' && st.quiz && st.quiz.type === 'find') { quizClick(i); return; }
+    if (i >= 300000) { selectSys(i - 300000, false); lastIdx = -2; return; }
+    if (i >= 200000) { selectBone(i - 200000, false); lastIdx = -2; return; }
     if (i >= 100000) { selectCT(i - 100000, false); lastIdx = -2; return; }
     if (i >= 0 && i === lastIdx && now - lastTap < 350) { removeMuscle(i); lastIdx = -2; return; }
     lastTap = now; lastIdx = i;
-    if (i >= 0) select(i, false); else if (st.ct >= 0) selectCT(-1); else if (st.sel >= 0 && !st.focus) select(-1);
+    if (i >= 0) select(i, false); else if (st.ct >= 0) selectCT(-1); else if (st.bone >= 0) selectBone(-1); else if (st.sys >= 0) selectSys(-1); else if (st.sel >= 0 && !st.focus) select(-1);
   });
   addEventListener('keydown', e => {
     if (e.target.matches('input')) return;
-    if (e.key === 'Escape') { if (st.ct >= 0) selectCT(-1); else select(-1); }
+    if (e.key === 'Escape') { if (st.ct >= 0) selectCT(-1); else if (st.bone >= 0) selectBone(-1); else if (st.sys >= 0) selectSys(-1); else if (st.mode === 'quiz') { st.mode = null; endQuiz(); } else select(-1); }
     if ((e.key === 'Delete' || e.key === 'Backspace') && st.sel >= 0) removeMuscle(st.sel);
   });
 
@@ -892,7 +1173,30 @@ footer.credit a { color: inherit; }
     if (play.key === key && play.side === side && play.muscle === muscle) { stopAction(); return; }
     play.key = key; play.side = side; play.muscle = muscle; play.t0 = performance.now();
     frameAction(side, key);
-    renderCard();
+    apply(); renderCard();
+  }
+  // ---------- 拮抗肌：做這個動作時被拉長的肌肉
+  const OPP = {
+    sh_flex: 'sh_ext', sh_ext: 'sh_flex', sh_abd: 'sh_add', sh_add: 'sh_abd', sh_ir: 'sh_er', sh_er: 'sh_ir', el_flex: 'el_ext', el_ext: 'el_flex', pron: 'sup', sup: 'pron',
+    wr_flex: 'wr_ext', wr_ext: 'wr_flex', wr_rad: 'wr_uln', wr_uln: 'wr_rad', fi_flex: 'fi_ext', fi_ext: 'fi_flex', th_flex: 'th_ext', th_ext: 'th_flex', th_abd: 'th_add', th_add: 'th_abd',
+    hip_flex: 'hip_ext', hip_ext: 'hip_flex', hip_abd: 'hip_add', hip_add: 'hip_abd', hip_ir: 'hip_er', hip_er: 'hip_ir', kn_flex: 'kn_ext', kn_ext: 'kn_flex',
+    an_dorsi: 'an_plan', an_plan: 'an_dorsi', an_inv: 'an_ev', an_ev: 'an_inv', to_flex: 'to_ext', to_ext: 'to_flex', tr_flex: 'tr_ext', tr_ext: 'tr_flex', nk_flex: 'nk_ext', nk_ext: 'nk_flex',
+    jw_open: 'jw_close', jw_close: 'jw_open', sc_elev: 'sc_dep', sc_dep: 'sc_elev', sc_ret: 'sc_pro', sc_pro: 'sc_ret',
+  };
+  // Map<muscle, true> of muscles lengthened by this action
+  function stretched(key, side) {
+    const other = side === 'L' ? 'R' : 'L';
+    let doers, anti;
+    if (/_rot_(same|opp)$/.test(key)) {
+      const base = key.replace(/_(same|opp)$/, ''), toward = key.endsWith('_same') ? side : other;   // which way the trunk/neck turns
+      doers = involved(base + '_same', toward); anti = involved(base + '_same', toward === 'L' ? 'R' : 'L');
+    } else if (/^(tr|nk)_lat$/.test(key)) {
+      doers = involved(key, side); anti = involved(key, other);
+    } else {
+      doers = involved(key, side); anti = OPP[key] ? involved(OPP[key], side) : new Map();
+    }
+    const out = new Map(); for (const i of anti.keys()) if (!doers.has(i)) out.set(i, true);
+    return out;
   }
   // 鏡頭退到能看清整個動作：屈伸從側面看，外展、旋轉從正面看
   const VIEW_OF = {
@@ -917,7 +1221,7 @@ footer.credit a { color: inherit; }
     const dir = ax === 'x' ? new THREE.Vector3(side * 0.94, 0.08, 0.33) : new THREE.Vector3(side * 0.15, 0.1, 0.98);
     tween(target.clone().addScaledVector(dir.normalize(), d), target);
   }
-  function stopAction(silent) { play.key = null; play.muscle = -1; poseBones(null); setBulge([], 0); if (!silent) renderCard(); }
+  function stopAction(silent) { const was = !!play.key; play.key = null; play.muscle = -1; poseBones(null); setBulge([], 0); if (was) apply(); if (!silent) renderCard(); }
   function tickAction(now) {
     if (!play.key) return;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1017,8 +1321,91 @@ footer.credit a { color: inherit; }
     if (play.muscle >= 0) stopAction(true);
     const wasOpen = st.mode === mode && !st.act;
     if (st.act) { st.act = null; stopAction(true); }
+    const hb = st.bone >= 0; st.bone = -1; st.sys = -1; if (hb) paintBones();
+    if (st.mode === 'quiz' && mode !== 'quiz') endQuiz();
     st.mode = wasOpen ? null : mode;
+    if (st.mode === 'quiz') startQuiz(); else if (wasOpen && mode === 'quiz') endQuiz();
     apply(); renderCard();
+  }
+
+  // ---------- 測驗：認名字（看亮起的肌肉選名字）／找位置（看名字點模型）
+  function quizPool() {
+    const q = st.quiz;
+    return MU.map((m, i) => i).filter(i => {
+      const m = MU[i];
+      if (m.tendon || /tarsus|ring|Trochlea|ligament|aponeurosis|retinaculum|Linea alba|tendon|crico|arytenoid|thyro-|vocalis/i.test(m.en)) return false;
+      if (q.region >= 0 && m.region !== q.region) return false;
+      if (q.type === 'find' || !q.deep) return m.layer === 1;
+      return true;
+    });
+  }
+  function startQuiz() {
+    st.quiz = st.quiz || { type: 'name', region: -1, deep: false, right: 0, total: 0 };
+    st.quiz.right = 0; st.quiz.total = 0;
+    nextQuestion();
+  }
+  function endQuiz() { if (st.quiz) { st.quiz.target = -1; st.quiz.answered = false; } apply(); }
+  function nextQuestion() {
+    const q = st.quiz, pool = quizPool();
+    q.answered = false; q.picked = -1; q.ok = null;
+    if (!pool.length) { q.target = -1; return; }
+    let t; do { t = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && t === q.target);
+    q.target = t;
+    if (q.type === 'name') {
+      const names = new Map(); MU.forEach((m, i) => { if (m.en !== MU[t].en && !m.tendon && !names.has(m.en)) names.set(m.en, i); });
+      const same = [...names.values()].filter(i => MU[i].region === MU[t].region), all = [...names.values()];
+      const src = same.length >= 3 ? same : all, picks = new Set();
+      while (picks.size < 3) picks.add(src[Math.floor(Math.random() * src.length)]);
+      q.choices = [t, ...picks].sort(() => Math.random() - 0.5);
+      if (st.layersOff.has(MU[t].layer)) st.layersOff.delete(MU[t].layer);
+      st.removed.delete(t);
+      frame(t, false);
+    }
+  }
+  function quizAnswer(i) {
+    const q = st.quiz; if (q.answered) return;
+    q.answered = true; q.picked = i; q.ok = i >= 0 && MU[i].en === MU[q.target].en; q.total++; if (q.ok) q.right++;
+    apply(); renderCard();
+  }
+  function quizClick(i) { if (i < 0 || i >= 100000) return; quizAnswer(i); if (!st.quiz.ok) frame(st.quiz.target, false); }
+  function renderQuiz(card) {
+    const q = st.quiz, t = q.target, m = t >= 0 ? MU[t] : null;
+    const regionOpts = ['<option value="-1">全身</option>', ...META.regions.map((r, k) => `<option value="${k}" ${q.region === k ? 'selected' : ''}>${r}</option>`)].join('');
+    let body = '';
+    if (!m) body = '<p class="empty">這個範圍沒有可以出題的肌肉，換個部位或打開「包含深層」試試。</p>';
+    else if (q.type === 'name') {
+      body = `<p class="qz">藍色這塊肌肉叫什麼？</p><div class="pick">${q.choices.map(i => {
+        const cls = !q.answered ? '' : MU[i].en === m.en ? ' good' : i === q.picked ? ' bad' : ' dim';
+        return `<button class="pk${cls}" data-c="${i}"><b>${MU[i].zh}</b><small>${MU[i].en}</small></button>`;
+      }).join('')}</div>`;
+    } else {
+      body = `<p class="qz">請在模型上點出：<b>${label(m)}</b></p>` + (q.answered ? '' : '<p class="fn muted">拖曳可以旋轉模型，點一下作答。</p>');
+    }
+    if (m && q.answered) body += `<div class="verdict ${q.ok ? 'good' : 'bad'}">${q.ok ? '答對了！' : '答錯了。'}${q.type === 'find' && !q.ok && q.picked >= 0 ? `你點的是 ${label(MU[q.picked])}，` : ''}正確答案是 <b>${label(m)}</b>（第 ${m.layer} 層）。</div>
+      <div class="acts"><button class="btn on" data-next>下一題</button><button class="btn" data-see>看這塊肌肉</button></div>`;
+    else if (m && q.type === 'find') body += `<div class="acts"><button class="btn" data-give>看答案</button><button class="btn" data-next>跳過</button></div>`;
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" data-x aria-label="關閉">✕</button>
+        <h2>肌肉測驗</h2>
+        <div class="sub">答對 ${q.right} / ${q.total} 題</div>
+        <div class="seg" role="group" aria-label="題型">
+          <button class="btn ${q.type === 'name' ? 'on' : ''}" data-ty="name">認名字</button><button class="btn ${q.type === 'find' ? 'on' : ''}" data-ty="find">找位置</button>
+        </div>
+        <div class="qopts">
+          <label>範圍 <select id="qzRegion">${regionOpts}</select></label>
+          ${q.type === 'name' ? `<label><input type="checkbox" id="qzDeep" ${q.deep ? 'checked' : ''}> 包含深層</label>` : '<span class="muted">只考最外層的肌肉</span>'}
+        </div>
+      </div>
+      <div class="bd">${body}</div>`;
+    card.querySelector('[data-x]').onclick = () => { st.mode = null; endQuiz(); renderCard(); };
+    card.querySelectorAll('[data-ty]').forEach(b => b.onclick = () => { q.type = b.dataset.ty; startQuiz(); apply(); renderCard(); });
+    card.querySelector('#qzRegion').onchange = e => { q.region = +e.target.value; startQuiz(); apply(); renderCard(); };
+    const deep = card.querySelector('#qzDeep'); if (deep) deep.onchange = e => { q.deep = e.target.checked; startQuiz(); apply(); renderCard(); };
+    card.querySelectorAll('[data-c]').forEach(b => b.onclick = () => quizAnswer(+b.dataset.c));
+    const nx = card.querySelector('[data-next]'); if (nx) nx.onclick = () => { if (!q.answered && q.type === 'find') q.total++; nextQuestion(); apply(); renderCard(); };
+    const gv = card.querySelector('[data-give]'); if (gv) gv.onclick = () => { quizAnswer(-1); frame(q.target, false); };
+    const see = card.querySelector('[data-see]'); if (see) see.onclick = () => { const i = q.target; st.mode = null; endQuiz(); select(i, true); };
   }
   function chooseAction(key) {
     st.act = { key, side: st.pickSide }; st.mode = null;
@@ -1048,7 +1435,7 @@ footer.credit a { color: inherit; }
         <button class="btn x" data-x aria-label="關閉">✕</button>
         <button class="back" data-back>← 選其他動作</button>
         <h2>${actLabel(a)}</h2>
-        <div class="sub">${ACTIONS[a.key][1]}。<span class="pin p"></span>主要肌肉　<span class="pin a"></span>輔助肌肉，其他肌肉變透明。</div>
+        <div class="sub">${ACTIONS[a.key][1]}。<span class="pin p"></span>主要　<span class="pin a"></span>輔助　<span class="pin s"></span>被拉長（拮抗肌），其他肌肉變透明。</div>
         <div class="moves"><button class="move ${on ? 'on' : ''}" data-play><span class="ic">${on ? '■' : '▶'}</span><span><b>${on ? '停止' : '播放動作'}</b><small>${ACTIONS[a.key][0]}</small></span></button></div>
       </div>
       <div class="bd"></div>`;
@@ -1064,6 +1451,7 @@ footer.credit a { color: inherit; }
       });
     };
     sec('主要肌肉', list.filter(x => x.p)); sec('輔助肌肉', list.filter(x => !x.p));
+    sec('被拉長的肌肉（拮抗肌）', [...stretched(a.key, BOTH.has(a.key) ? '' : a.side).keys()].map(i => ({ i })).sort((x, y) => MU[x.i].layer - MU[y.i].layer));
     if (!list.length) bd.insertAdjacentHTML('beforeend', '<p class="empty">目前的資料裡沒有對應這個動作的肌肉。</p>');
     bd.insertAdjacentHTML('beforeend', '<div class="note">「主要」是這塊肌肉最主要的功能；「輔助」是它也會參與、但不是主力的動作。實際上每個動作都由多塊肌肉合作，力量分配會隨姿勢改變。</div>');
     card.querySelector('[data-x]').onclick = () => { st.act = null; stopAction(true); apply(); renderCard(); };
@@ -1223,6 +1611,7 @@ footer.credit a { color: inherit; }
   }
   document.querySelectorAll('[data-lock]').forEach(b => b.onclick = () => setLock(!st.lock, true));
   try { setLock(localStorage.getItem('atlas-lock') === '1', false); } catch (e) { setLock(false, false); }
+  document.querySelectorAll('[data-sys]').forEach(b => b.onclick = () => { const t = b.dataset.sys; st.sysOn[t] = !st.sysOn[t]; apply(); if (st.sys >= 0) renderCard(); });
   document.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { const k = +b.dataset.ct; st.ctOn[k] = !st.ctOn[k]; apply(); if (st.ct >= 0) renderCard(); });
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
 
@@ -1238,7 +1627,7 @@ footer.credit a { color: inherit; }
     if (save) try { localStorage.setItem('atlas-theme', pref); } catch (e) {}
     document.querySelectorAll('[data-theme-set]').forEach(b => b.classList.toggle('on', b.dataset.themeSet === pref));
     const cs = getComputedStyle(root);
-    boneMesh.material.color.set(cs.getPropertyValue('--bone').trim());
+    paintBones();
     syncBars();
     const lbl = { auto: '自動', light: '淺色', dark: '深色' }[pref];
     $('#mTheme').setAttribute('aria-label', '主題：' + lbl);
@@ -1302,6 +1691,6 @@ footer.credit a { color: inherit; }
   paint(); apply(); renderCard();
   { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist()); }
   requestAnimationFrame(loop);
-  window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved, setBulge, selectCT, CTM };
+  window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved, setBulge, selectCT, CTM, selectBone, selectSys, SYS, BONEN, stretched };
 })();
 </script>
