@@ -13,6 +13,11 @@ on:
 permissions:
   contents: write
 
+# 同一個分支有新的提交時，取消還在跑的舊打包，避免互相衝突
+concurrency:
+  group: anatomy-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -46,4 +51,9 @@ jobs:
           git add anatomy/muscle-atlas.apk
           if git diff --cached --quiet; then echo "APK 沒有變動"; exit 0; fi
           git commit -m "Update muscle-atlas.apk"
-          git push
+          # 打包期間分支若有新提交，先接上最新內容再推送（最多試 3 次）
+          for i in 1 2 3; do
+            git pull --rebase -X theirs origin "${GITHUB_REF_NAME}" && git push && exit 0
+            sleep $((i * 5))
+          done
+          exit 1
