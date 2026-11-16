@@ -27,15 +27,33 @@ rep('<title>', `<!doctype html>
 <title>`);
 rep('<div class="app">', '</head>\n<body>\n<div class="app">');
 const meta = fs.readFileSync('out/meta.json', 'utf8').replace(/</g, '\\u003c');
+// 模型資料另存成小檔案（檔名帶內容雜湊，可長期快取），網頁外殼載入後再依序下載並顯示進度
+import crypto from 'node:crypto';
 const GEO_CHUNKS = (() => {
+  const metaTxt = fs.readFileSync('out/meta.json', 'utf8').replace(/</g, '\\u003c');
   const b64 = fs.readFileSync('out/body.bin').toString('base64');
-  const n = Math.max(1, Math.ceil(b64.length / 160000)), size = Math.ceil(b64.length / n), out = [];
-  // 下載進度：資料切成小段，每段到達時更新「正在下載模型… xx%」
-  out.push(`<script>window.__parts=[];window.__ld=function(i,n,s){__parts[i]=s;var p=Math.round((i+1)/n*100),t=document.getElementById('ldTxt'),b=document.getElementById('ldBar');if(t)t.textContent='正在下載模型… '+p+'%';if(b)b.style.width=p+'%';};</script>`);
-  for (let i = 0; i < n; i++) out.push(`<script>__ld(${i},${n},"${b64.slice(i * size, (i + 1) * size)}")</script>`);
-  return out.join('\n');
+  const hash = crypto.createHash('sha256').update(metaTxt).update(b64).digest('hex').slice(0, 10);
+  const dir = OUT + '/d';
+  fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
+  const metaFile = `d/${hash}-meta.js`;
+  fs.writeFileSync(OUT + '/' + metaFile, `window.__META=${metaTxt};\n`);
+  const n = Math.max(1, Math.ceil(b64.length / 400000)), size = Math.ceil(b64.length / n), files = [];
+  for (let i = 0; i < n; i++) { const f = `d/${hash}-${i}.js`; fs.writeFileSync(OUT + '/' + f, `__ld(${i},"${b64.slice(i * size, (i + 1) * size)}");\n`); files.push(f); }
+  return `<script>
+(function () {
+  var files = ${JSON.stringify(files)}, done = 0, total = files.length + 1;
+  window.__parts = [];
+  function prog() { var p = Math.round(done / total * 100), t = document.getElementById('ldTxt'), b = document.getElementById('ldBar'); if (t) t.textContent = '正在下載模型… ' + p + '%'; if (b) b.style.width = p + '%'; }
+  window.__ld = function (i, s) { window.__parts[i] = s; };
+  function load(src) { return new Promise(function (ok, bad) { var s = document.createElement('script'); s.src = src; s.onload = function () { done++; prog(); ok(); }; s.onerror = function () { bad(new Error('無法載入 ' + src)); }; document.head.appendChild(s); }); }
+  window.__dataReady = (async function () {
+    await load(${JSON.stringify(metaFile)});
+    for (var k = 0; k < files.length; k += 4) await Promise.all(files.slice(k, k + 4).map(load));
+  })();
 })();
-t = t.replaceAll('__VERSION__', VERSION).replace('__HDURL__', 'hd.bin').replace('__META__', () => meta).replace('__GEO__', () => GEO_CHUNKS);
+</script>`;
+})();
+t = t.replaceAll('__VERSION__', VERSION).replace('__HDURL__', 'hd.bin').replace('__DATA__', () => GEO_CHUNKS);
 t += `
 <script>
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -45,4 +63,4 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) naviga
 `;
 fs.writeFileSync(OUT + '/index.html', t);
 fs.writeFileSync(OUT + '/version.json', JSON.stringify({ v: VERSION }) + '\n');
-console.log('index.html', fs.statSync(OUT + '/index.html').size, 'version', VERSION);
+console.log('index.html', fs.statSync(OUT + '/index.html').size, 'version', VERSION, 'data files', fs.readdirSync(OUT + '/d').length);

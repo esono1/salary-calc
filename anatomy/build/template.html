@@ -413,11 +413,13 @@ footer.credit a { color: inherit; }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script id="meta" type="application/json">__META__</script>
-__GEO__
+__DATA__
 <script>
 (async function () {
-  const META = JSON.parse(document.getElementById('meta').textContent);
+  // 模型資料：單一檔案版直接內嵌；App 版另外下載（可快取），等它到齊
+  try { await (window.__dataReady || Promise.resolve()); }
+  catch (e) { const t = document.getElementById('ldTxt'); if (t) t.textContent = '模型資料下載失敗，請確認網路後重開。（' + e.message + '）'; throw e; }
+  const META = window.__META;
   const MU = META.muscles;
   const NL = Math.max(...MU.map(m => m.layer));
   const $ = s => document.querySelector(s);
