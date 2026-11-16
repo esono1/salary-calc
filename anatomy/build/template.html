@@ -91,6 +91,18 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 .card .stats div { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
 .card .stats small { display: block; font-size: 11px; color: var(--muted); }
 .card .stats b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.card .moves { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.card .moves:empty { display: none; }
+.move { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--fg); border-radius: 10px; padding: 6px 12px 6px 8px; cursor: pointer; text-align: left; font: inherit; }
+.move .ic { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; display: inline-grid; place-items: center; font-size: 10px; flex: none; }
+.move b { display: block; font-size: 13px; font-weight: 700; }
+.move small { display: block; font-size: 11px; color: var(--muted); }
+.move.on { background: var(--accent); color: #fff; }
+.move.on small { color: rgba(255,255,255,.85); }
+.move.on .ic { background: #fff; color: var(--accent); }
+.move:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card .fn { margin: 0; font-size: 13px; line-height: 1.7; }
+.card .fn .muted { color: var(--muted); font-size: 12px; }
 .card .acts { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
 .card .acts .btn { border: 1px solid var(--line); background: var(--bg); font-size: 12px; }
 .card .acts .btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -161,6 +173,8 @@ footer.credit a { color: inherit; }
   .card .stats div { padding: 6px 8px; }
   .card .stats b { font-size: 14px; }
   .card .acts { margin-top: 8px; }
+  .card .moves { margin-top: 8px; flex-wrap: nowrap; overflow-x: auto; }
+  .move { flex: none; padding: 5px 10px 5px 6px; }
   .hint { display: none; }
   .loading { padding: 0 24px; text-align: center; }
 }
@@ -222,6 +236,7 @@ footer.credit a { color: inherit; }
       <ul>
         <li>拖曳旋轉，滾輪或雙指縮放，右鍵或雙指拖曳平移。</li>
         <li><b>點一下</b>肌肉：看名稱、層次、誰蓋住它。</li>
+        <li>選好肌肉後按 <b>▶</b>，模型會做出這塊肌肉負責的動作。</li>
         <li><b>按兩下</b>肌肉：把它拆下來，看底下是什麼。</li>
         <li>左下角的層次按鈕可以一層一層剝開。</li>
         <li>「只看相鄰」會把上面那層變半透明，下面那層實心顯示。</li>
@@ -280,6 +295,19 @@ footer.credit a { color: inherit; }
   scene.add(camera);
 
   const group = new THREE.Group(); scene.add(group);
+  // ---------- skeleton (one bone per body segment, rest pose = model pose)
+  const BONES = {}, boneList = [];
+  META.skel.forEach(b => {
+    const bone = new THREE.Bone(); bone.name = b.name;
+    const p = new THREE.Vector3(...b.pivot);
+    if (b.parent) { bone.position.copy(p).sub(new THREE.Vector3(...META.skel.find(x => x.name === b.parent).pivot)); BONES[b.parent].add(bone); }
+    else { bone.position.copy(p); group.add(bone); }
+    BONES[b.name] = bone; boneList.push(bone);
+  });
+  group.updateMatrixWorld(true);
+  const skeleton = new THREE.Skeleton(boneList);
+  const IDENT = new THREE.Matrix4();
+  function skin(mesh) { mesh.bindMode = 'detached'; mesh.bind(skeleton, IDENT); mesh.frustumCulled = false; return mesh; }
   const tendonCol = new THREE.Color('#efe6dc');
   const meshes = MU.map((m, i) => {
     const g = new THREE.BufferGeometry();
@@ -288,12 +316,16 @@ footer.credit a { color: inherit; }
     g.computeVertexNormals(); g.computeBoundingSphere();
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(m.nv * 3), 3));
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0, side: THREE.DoubleSide });
-    const mesh = new THREE.Mesh(g, mat);
+    const sw = new Uint8Array(bytes, m.w, m.nv * 8), si = new Uint16Array(m.nv * 4), sws = new Float32Array(m.nv * 4);
+    for (let v = 0; v < m.nv; v++) for (let k = 0; k < 4; k++) { si[v * 4 + k] = sw[v * 8 + k]; sws[v * 4 + k] = sw[v * 8 + 4 + k] / 255; }
+    g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+    g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
+    const mesh = new THREE.SkinnedMesh(g, mat);
+    group.add(mesh); skin(mesh);
     mesh.userData.i = i;
     m.flag = new Uint8Array(bytes, m.f, m.nv);
     m.center = g.boundingSphere.center.clone();
     m.covers = [];
-    group.add(mesh);
     return mesh;
   });
   MU.forEach((m, i) => m.cb.forEach(([o, pc]) => MU[o].covers.push([i, pc])));
@@ -304,8 +336,13 @@ footer.credit a { color: inherit; }
     g.setAttribute('position', new THREE.BufferAttribute(deq(b.p, b.nv), 3));
     g.setIndex(new THREE.BufferAttribute(new Uint32Array(bytes, b.i, b.ni), 1));
     g.computeVertexNormals();
-    boneMesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: tok('--bone'), roughness: 0.8 }));
-    boneMesh.visible = false; scene.add(boneMesh);
+    const seg = new Uint8Array(bytes, b.s, b.nv), si = new Uint16Array(b.nv * 4), sws = new Float32Array(b.nv * 4);
+    for (let v = 0; v < b.nv; v++) { si[v * 4] = seg[v]; sws[v * 4] = 1; }
+    g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+    g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
+    boneMesh = new THREE.SkinnedMesh(g, new THREE.MeshStandardMaterial({ color: tok('--bone'), roughness: 0.8 }));
+    group.add(boneMesh); skin(boneMesh);
+    boneMesh.visible = false;
   }
   $('#loading').remove();
   $('#count').textContent = new Set(MU.map(m => m.en)).size + ' 種、' + MU.length;
@@ -431,6 +468,7 @@ footer.credit a { color: inherit; }
           <div><small>直接露在表面</small><b>${m.exposed}%</b></div>
           <div><small>部位</small><b>${META.regions[m.region]}</b></div>
         </div>
+        <div class="moves" id="cmv"></div>
         <div class="acts">
           <button class="btn ${st.focus ? 'on' : ''}" id="cf">只看相鄰</button>
           <button class="btn" id="cr">拆下這塊</button>
@@ -439,6 +477,20 @@ footer.credit a { color: inherit; }
       </div>
       <div class="bd" id="cbd"></div>`;
     const bd = card.querySelector('#cbd');
+    const mv = card.querySelector('#cmv');
+    if (m.a.length) {
+      m.a.forEach(k => {
+        const b = document.createElement('button');
+        const on = play.key === k && play.muscle === st.sel;
+        b.className = 'move' + (on ? ' on' : '');
+        b.innerHTML = `<span class="ic">${on ? '■' : '▶'}</span><span><b>${ACTIONS[k][0]}</b><small>${ACTIONS[k][1]}</small></span>`;
+        b.setAttribute('aria-pressed', on);
+        b.onclick = () => startAction(st.sel, k);
+        mv.appendChild(b);
+      });
+    }
+    const hf = document.createElement('h4'); hf.textContent = '功能'; bd.appendChild(hf);
+    bd.insertAdjacentHTML('beforeend', `<p class="fn">${m.fn || '—'}${m.a.length ? '' : '<br><span class="muted">這塊肌肉沒有明顯的關節動作，所以不做擺動示範。</span>'}</p>`);
     const h1 = document.createElement('h4'); h1.textContent = '被這些肌肉蓋住（在它上面）'; bd.appendChild(h1);
     if (m.cb.length) m.cb.forEach(([o, pc]) => bd.appendChild(relRow(o, pc)));
     else bd.insertAdjacentHTML('beforeend', '<p class="empty">沒有肌肉蓋在它上面，直接位於皮膚與筋膜下方。</p>');
@@ -456,6 +508,7 @@ footer.credit a { color: inherit; }
   }
 
   function select(i, doFrame) {
+    if (play.key && i !== play.muscle) { play.key = null; play.muscle = -1; poseBones(null); }
     st.sel = i;
     if (i < 0) st.focus = false;
     if (i >= 0 && st.removed.has(i)) st.removed.delete(i);
@@ -484,7 +537,7 @@ footer.credit a { color: inherit; }
     const mesh = meshes[i], c = MU[i].center.clone().add(mesh.position);
     const r = Math.max(mesh.geometry.boundingSphere.radius, 0.05);
     const dir = keepDir ? camera.position.clone().sub(controls.target).normalize() : new THREE.Vector3(...MU[i].o);
-    tween(c.clone().addScaledVector(dir, Math.min(3.2, r * 5 + 0.35)), c);
+    tween(c.clone().addScaledVector(dir, Math.min(3.2, (r * 5 + 0.35) / Math.sqrt(viewShift().vis))), c);
   }
   const VIEWS = { front: [0, 0, 1], back: [0, 0, -1], left: [1, 0, 0], right: [-1, 0, 0] };
   const fitDist = () => {
@@ -533,6 +586,119 @@ footer.credit a { color: inherit; }
     if (e.key === 'Escape') select(-1);
     if ((e.key === 'Delete' || e.key === 'Backspace') && st.sel >= 0) removeMuscle(st.sel);
   });
+
+  // ---------- 動作：每個動作 = 關節角度的變化（from → to），s = +1 左側、-1 右側
+  // 軸：x = 屈伸（前後擺）、z = 外展內收（左右擺）、y = 旋轉。角度單位：度。
+  const ACTIONS = {
+    sh_flex: ['肩屈曲', '手臂往前舉', s => [['arm', 'x', 0, -110]]],
+    sh_ext: ['肩伸展', '手臂往後擺', s => [['arm', 'x', -40, 40]]],
+    sh_abd: ['肩外展', '手臂往側邊舉起', s => [['arm', 'z', 0, 90 * s]]],
+    sh_add: ['肩內收', '手臂從側邊收回身體', s => [['arm', 'z', 70 * s, 0]]],
+    sh_ir: ['肩內旋', '手肘彎著，前臂往肚子轉', s => [['forearm', 'x', -90, -90], ['arm', 'y', 0, -60 * s]]],
+    sh_er: ['肩外旋', '手肘彎著，前臂往外轉', s => [['forearm', 'x', -90, -90], ['arm', 'y', 0, 50 * s]]],
+    el_flex: ['肘屈曲', '彎手肘', s => [['forearm', 'x', 0, -115]]],
+    el_ext: ['肘伸展', '伸直手肘', s => [['forearm', 'x', -110, 0]]],
+    pron: ['前臂旋前', '手掌轉向下', s => [['forearm', 'x', -90, -90], ['forearm', 'y', 0, -80 * s]]],
+    sup: ['前臂旋後', '手掌轉向上', s => [['forearm', 'x', -90, -90], ['forearm', 'y', -80 * s, 0]]],
+    wr_flex: ['腕屈曲', '手掌往前臂內側彎', s => [['hand', 'x', 0, -65]]],
+    wr_ext: ['腕伸展', '手背往上翹', s => [['hand', 'x', 0, 55]]],
+    wr_rad: ['腕橈偏', '往拇指側偏', s => [['hand', 'z', 0, 20 * s]]],
+    wr_uln: ['腕尺偏', '往小指側偏', s => [['hand', 'z', 0, -30 * s]]],
+    fi_flex: ['手指屈曲', '握拳', s => [['fingers', 'x', 0, -85]]],
+    fi_ext: ['手指伸展', '張開伸直手指', s => [['fingers', 'x', -60, 10]]],
+    th_flex: ['拇指屈曲', '拇指往掌心彎', s => [['thumb', 'z', 0, -35 * s], ['thumb', 'x', 0, -15]]],
+    th_ext: ['拇指伸展', '拇指往外張開', s => [['thumb', 'z', 0, 25 * s]]],
+    th_abd: ['拇指外展', '拇指往掌心前方張開', s => [['thumb', 'x', 0, -40]]],
+    th_add: ['拇指內收', '拇指夾回食指旁', s => [['thumb', 'x', -35, 0]]],
+    hip_flex: ['髖屈曲', '抬大腿', s => [['thigh', 'x', 0, -80], ['leg', 'x', 0, 60]]],
+    hip_ext: ['髖伸展', '大腿往後擺', s => [['thigh', 'x', -35, 20]]],
+    hip_abd: ['髖外展', '腿往側邊打開', s => [['thigh', 'z', 0, 40 * s]]],
+    hip_add: ['髖內收', '腿從側邊收回（夾腿）', s => [['thigh', 'z', 35 * s, -5 * s]]],
+    hip_ir: ['髖內旋', '膝蓋彎著，小腿往外擺', s => [['leg', 'x', 90, 90], ['thigh', 'y', 0, -35 * s]]],
+    hip_er: ['髖外旋', '膝蓋彎著，小腿往內擺', s => [['leg', 'x', 90, 90], ['thigh', 'y', 0, 40 * s]]],
+    kn_flex: ['膝屈曲', '彎膝蓋', s => [['leg', 'x', 0, 105]]],
+    kn_ext: ['膝伸展', '伸直膝蓋', s => [['leg', 'x', 90, 0]]],
+    an_dorsi: ['踝背屈', '勾腳尖', s => [['foot', 'x', 0, -22]]],
+    an_plan: ['踝蹠屈', '踮腳、腳尖往下', s => [['foot', 'x', 0, 40]]],
+    an_inv: ['足內翻', '腳底轉向內側', s => [['foot', 'z', 0, -25 * s]]],
+    an_ev: ['足外翻', '腳底轉向外側', s => [['foot', 'z', 0, 15 * s]]],
+    to_flex: ['腳趾屈曲', '腳趾往下抓', s => [['toes', 'x', 0, 30]]],
+    to_ext: ['腳趾伸展', '腳趾往上翹', s => [['toes', 'x', 0, -35]]],
+    tr_flex: ['軀幹前屈', '彎腰', s => [['lumbar', 'x', 0, 20], ['thorax', 'x', 0, 22]]],
+    tr_ext: ['軀幹伸展', '挺胸後仰', s => [['lumbar', 'x', 0, -12], ['thorax', 'x', 0, -12]]],
+    tr_lat: ['軀幹側屈', '往同側彎', s => [['lumbar', 'z', 0, -12 * s], ['thorax', 'z', 0, -12 * s]]],
+    tr_rot_same: ['軀幹旋轉（轉向同側）', '上半身轉向這塊肌肉這一側', s => [['lumbar', 'y', 0, 8 * s], ['thorax', 'y', 0, 24 * s]]],
+    tr_rot_opp: ['軀幹旋轉（轉向對側）', '上半身轉向另一側', s => [['lumbar', 'y', 0, -8 * s], ['thorax', 'y', 0, -24 * s]]],
+    nk_flex: ['頸前屈', '低頭', s => [['neck', 'x', 0, 25], ['head', 'x', 0, 15]]],
+    nk_ext: ['頸伸展', '抬頭後仰', s => [['neck', 'x', 0, -25], ['head', 'x', 0, -15]]],
+    nk_lat: ['頸側屈', '頭往同側肩膀倒', s => [['neck', 'z', 0, -22 * s], ['head', 'z', 0, -10 * s]]],
+    nk_rot_same: ['頸旋轉（轉向同側）', '頭轉向這一側', s => [['neck', 'y', 0, 35 * s], ['head', 'y', 0, 25 * s]]],
+    nk_rot_opp: ['頸旋轉（轉向對側）', '頭轉向另一側', s => [['neck', 'y', 0, -35 * s], ['head', 'y', 0, -25 * s]]],
+    jw_open: ['張嘴', '下巴往下', s => [['jaw', 'x', 0, 22]]],
+    jw_close: ['閉嘴（咬合）', '下巴往上', s => [['jaw', 'x', 22, 0]]],
+    sc_elev: ['肩胛上提', '聳肩', s => [['scap', 'z', 0, 12 * s]]],
+    sc_dep: ['肩胛下壓', '肩膀往下沉', s => [['scap', 'z', 0, -7 * s]]],
+    sc_ret: ['肩胛後縮', '把肩胛骨往脊椎夾', s => [['scap', 'y', 0, 14 * s]]],
+    sc_pro: ['肩胛前伸', '把肩膀往前推', s => [['scap', 'y', 0, -14 * s]]],
+  };
+  const SIDED = new Set(['scap', 'arm', 'forearm', 'hand', 'fingers', 'thumb', 'thigh', 'leg', 'foot', 'toes']);
+  const play = { key: null, muscle: -1, t0: 0, back: 0 };
+  const DEG = Math.PI / 180, qx = new THREE.Quaternion(), qy = new THREE.Quaternion(), qz = new THREE.Quaternion();
+  const AX = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
+  function poseBones(key, sideLetter, p) {
+    const ang = {};
+    if (key) {
+      const s = sideLetter === 'L' ? 1 : -1, S = sideLetter || 'R';
+      for (const [b, ax, from, to] of ACTIONS[key][2](sideLetter ? s : 1)) {
+        const name = SIDED.has(b) ? b + '_' + S : b;
+        (ang[name] ||= { x: 0, y: 0, z: 0 })[ax] += from + (to - from) * p;
+      }
+    }
+    for (const bone of boneList) {
+      const a = ang[bone.name];
+      if (!a) { bone.quaternion.identity(); continue; }
+      qz.setFromAxisAngle(AX.z, a.z * DEG); qx.setFromAxisAngle(AX.x, a.x * DEG); qy.setFromAxisAngle(AX.y, a.y * DEG);
+      bone.quaternion.copy(qz).multiply(qx).multiply(qy);
+    }
+  }
+  const PERIOD = 2600;
+  function startAction(i, key) {
+    if (play.key === key && play.muscle === i) { stopAction(); return; }
+    play.key = key; play.muscle = i; play.t0 = performance.now();
+    frameAction(i, key);
+    renderCard();
+  }
+  // 鏡頭退到能看清整個動作：屈伸從側面看，外展、旋轉從正面看
+  const VIEW_OF = {
+    arm: [0.15, 1.6], forearm: [-0.05, 1.3], hand: [-0.25, 1.0], fingers: [-0.3, 0.9], thumb: [-0.3, 0.9], scap: [0, 1.4],
+    thigh: [-0.3, 2.6], leg: [-0.2, 1.9], foot: [0, 1.0], toes: [0, 0.8],
+    lumbar: [0, 0], thorax: [0, 0], neck: [0.05, 0.9], head: [0.05, 0.9], jaw: [0, 0.7],
+  };
+  function frameAction(i, key) {
+    const m = MU[i], s = m.side === 'L' ? 1 : -1, S = m.side || 'R';
+    const keys = ACTIONS[key][2](m.side ? s : 1);
+    const [b, ax] = keys[keys.length - 1];
+    const name = SIDED.has(b) ? b + '_' + S : b;
+    const [dy, dist] = VIEW_OF[b] || [0, 0];
+    let target, d;
+    if (!dist) { target = viewTarget(); d = fitDist() / Math.sqrt(viewShift().vis); }
+    else {
+      target = new THREE.Vector3(...META.skel.find(x => x.name === name).pivot); target.y += dy;
+      if (b === 'thigh') target.x *= 0.5;
+      d = dist * Math.max(1, 0.8 / Math.min(1, camera.aspect)) / Math.sqrt(viewShift().vis);
+    }
+    const side = m.side ? s : 1;
+    const dir = ax === 'x' ? new THREE.Vector3(side * 0.94, 0.08, 0.33) : new THREE.Vector3(side * 0.15, 0.1, 0.98);
+    tween(target.clone().addScaledVector(dir.normalize(), d), target);
+  }
+  function stopAction() { play.key = null; play.muscle = -1; poseBones(null); renderCard(); }
+  function tickAction(now) {
+    if (!play.key) return;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const t = ((now - play.t0) % PERIOD) / PERIOD;
+    const p = reduce ? 1 : (1 - Math.cos(t * Math.PI * 2)) / 2;
+    poseBones(play.key, MU[play.muscle].side, p);
+  }
 
   // ---------- mobile sheets
   function closeSheets() { $('#toolbar').classList.remove('open'); $('#index').classList.remove('open'); $('#scrim').hidden = true; }
@@ -596,16 +762,28 @@ footer.credit a { color: inherit; }
   } catch (e) {}
 
   // ---------- loop
+  // 資訊卡打開時，把 3D 畫面的中心移到沒被卡片擋住的地方（手機往上、電腦往左）
+  let lastOff = '';
+  function viewShift() {
+    const w = canvas.clientWidth, h = canvas.clientHeight, card = $('#card');
+    if (!card || card.hidden) return { x: 0, y: 0, vis: 1 };
+    if (innerWidth <= 820) { const ch = card.offsetHeight, top = 56; return { x: 0, y: (ch - top) / 2, vis: Math.max(0.35, (h - ch - top) / h) }; }
+    return { x: (card.offsetWidth + 12) / 2, y: 0, vis: 1 };
+  }
   function resize() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
-    if (canvas.width !== Math.round(w * renderer.getPixelRatio()) || canvas.height !== Math.round(h * renderer.getPixelRatio())) {
-      renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    const sh = viewShift(), key = [w, h, Math.round(sh.x), Math.round(sh.y)].join();
+    if (canvas.width !== Math.round(w * renderer.getPixelRatio()) || canvas.height !== Math.round(h * renderer.getPixelRatio()) || key !== lastOff) {
+      lastOff = key;
+      renderer.setSize(w, h, false); camera.aspect = w / h;
+      if (sh.x || sh.y) camera.setViewOffset(w, h, Math.round(sh.x), Math.round(sh.y), w, h); else camera.clearViewOffset();
+      camera.updateProjectionMatrix();
     }
   }
-  function loop(now) { resize(); if (anim) anim(now); controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
+  function loop(now) { resize(); if (anim) anim(now); tickAction(now); controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
   paint(); apply(); renderCard();
   { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist()); }
   requestAnimationFrame(loop);
-  window.__atlas = { MU, select, st };
+  window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS };
 })();
 </script>
