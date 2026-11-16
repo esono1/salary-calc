@@ -26,7 +26,7 @@ rep('<title>', `<!doctype html>
 rep('<div class="app">', '</head>\n<body>\n<div class="app">');
 const meta = fs.readFileSync('out/meta.json', 'utf8').replace(/</g, '\\u003c');
 const geo = fs.readFileSync('out/body.bin').toString('base64');
-t = t.replace('__META__', () => meta).replace('__GEO__', () => geo);
+t = t.replace('__HDURL__', 'hd.bin').replace('__META__', () => meta).replace('__GEO__', () => geo);
 t += `
 <script>
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});

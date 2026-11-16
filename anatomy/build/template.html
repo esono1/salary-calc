@@ -91,6 +91,40 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 .card .stats div { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
 .card .stats small { display: block; font-size: 11px; color: var(--muted); }
 .card .stats b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.card .moves { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.card .moves:empty { display: none; }
+.move { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--fg); border-radius: 10px; padding: 6px 12px 6px 8px; cursor: pointer; text-align: left; font: inherit; }
+.move .ic { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; display: inline-grid; place-items: center; font-size: 10px; flex: none; }
+.move b { display: block; font-size: 13px; font-weight: 700; }
+.move small { display: block; font-size: 11px; color: var(--muted); }
+.move.on { background: var(--accent); color: #fff; }
+.move.on small { color: rgba(255,255,255,.85); }
+.move.on .ic { background: #fff; color: var(--accent); }
+.move:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card .fn { margin: 0; font-size: 13px; line-height: 1.7; }
+.card .fn.att b { font-weight: 700; }
+.card .fn.muted { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.pin { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.pin.o { background: #e5484d; } .pin.i { background: #2f7de1; }
+.pin.p { background: #e25563; margin-left: 4px; } .pin.a { background: #e8a33a; margin-left: 4px; }
+.back { display: block; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12px; padding: 0 0 6px; cursor: pointer; }
+.back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg { display: inline-flex; align-items: center; gap: 2px; margin-top: 10px; background: var(--bg); border-radius: 9px; padding: 3px; }
+.seg .lab { font-size: 11px; color: var(--muted); padding: 0 6px; }
+.pick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.pick.presets { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 10px; }
+.pk { border: 1px solid var(--line); background: var(--bg); border-radius: 9px; padding: 7px 10px; text-align: left; cursor: pointer; font: inherit; color: var(--fg); min-width: 0; }
+.pk:hover { border-color: var(--accent); }
+.pk:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pk b { display: block; font-size: 13px; }
+.pk small { display: block; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk.sm { padding: 6px 4px; text-align: center; }
+.pk.sm b { font-size: 12px; font-weight: 500; }
+.sl { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(0, 1fr) 3.2em; gap: 8px; align-items: center; font-size: 12px; padding: 3px 0; }
+.sl span { color: var(--muted); }
+.sl input { width: 100%; accent-color: var(--accent); }
+.sl output { text-align: right; font-variant-numeric: tabular-nums; }
+.card .fn .muted { color: var(--muted); font-size: 12px; }
 .card .acts { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
 .card .acts .btn { border: 1px solid var(--line); background: var(--bg); font-size: 12px; }
 .card .acts .btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -121,7 +155,10 @@ footer.credit a { color: inherit; }
   .app { display: block; height: 100%; }
   main.stage { position: fixed; inset: 0; }
   .mbar { display: flex; position: absolute; z-index: 5; top: calc(8px + env(safe-area-inset-top, 0px)); left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); gap: 6px; align-items: center; }
-  .mbar .ttl { flex: 1; min-width: 0; font-family: var(--font-head); font-size: 16px; font-weight: 700; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 6px var(--stage); }
+  .desk-only { display: none !important; }
+  .mbar .icon-btn { padding: 7px 9px; }
+  .mbar .icon-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .mbar .ttl { visibility: hidden; flex: 1; min-width: 0; font-family: var(--font-head); font-size: 16px; font-weight: 700; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 6px var(--stage); }
   .scrim:not([hidden]) { display: block; position: fixed; inset: 0; background: rgba(20, 10, 15, .35); z-index: 25; }
 
   /* sheets */
@@ -161,6 +198,8 @@ footer.credit a { color: inherit; }
   .card .stats div { padding: 6px 8px; }
   .card .stats b { font-size: 14px; }
   .card .acts { margin-top: 8px; }
+  .card .moves { margin-top: 8px; flex-wrap: nowrap; overflow-x: auto; }
+  .move { flex: none; padding: 5px 10px 5px 6px; }
   .hint { display: none; }
   .loading { padding: 0 24px; text-align: center; }
 }
@@ -183,6 +222,9 @@ footer.credit a { color: inherit; }
     <div class="mbar">
       <button class="icon-btn" id="mList" aria-label="肌肉清單"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>清單</button>
       <div class="ttl">全身肌肉分層圖譜</div>
+      <button class="icon-btn" data-tool="pick" aria-label="用動作找肌肉"><svg viewBox="0 0 24 24"><path d="M5 12h4l3-7 3 14 3-7h1"/></svg>動作</button>
+      <button class="icon-btn" data-tool="pose" aria-label="擺姿勢"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M7 9l5 2 5-2M9 21l3-7 3 7"/></svg>姿勢</button>
+      <button class="icon-btn" data-lock aria-pressed="false" aria-label="鎖定視角"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path class="shackle" d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
       <button class="icon-btn" id="mTheme" aria-label="切換主題"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
       <button class="icon-btn" id="mOpts" aria-label="顯示設定"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>顯示</button>
     </div>
@@ -192,6 +234,7 @@ footer.credit a { color: inherit; }
       <div class="grp" role="group" aria-label="視角">
         <span class="lab">視角</span>
         <button class="btn" data-view="front">前</button><button class="btn" data-view="back">後</button><button class="btn" data-view="left">左</button><button class="btn" data-view="right">右</button>
+        <button class="btn" data-lock aria-pressed="false" title="鎖定後，按任何按鈕都不會移動鏡頭">鎖定視角</button>
       </div>
       <div class="grp" role="group" aria-label="上色">
         <span class="lab">上色</span>
@@ -205,6 +248,18 @@ footer.credit a { color: inherit; }
       <div class="grp" role="group" aria-label="主題">
         <span class="lab">主題</span>
         <button class="btn" data-theme-set="auto">自動</button><button class="btn" data-theme-set="light">淺色</button><button class="btn" data-theme-set="dark">深色</button>
+      </div>
+      <div class="grp" role="group" aria-label="筋膜、滑液囊、腱鞘">
+        <span class="lab">結締組織</span>
+        <button class="btn" data-ct="0">筋膜</button><button class="btn" data-ct="1">滑液囊</button><button class="btn" data-ct="2">腱鞘</button>
+      </div>
+      <div class="grp" role="group" aria-label="模型精細度">
+        <span class="lab">模型</span>
+        <button class="btn on" data-q="std">標準</button><button class="btn" data-q="hd" id="hdBtn">精細</button>
+      </div>
+      <div class="grp desk-only" role="group" aria-label="工具">
+        <span class="lab">工具</span>
+        <button class="btn" data-tool="pick">動作查詢</button><button class="btn" data-tool="pose">擺姿勢</button>
       </div>
     </div>
     <div class="legend">
@@ -222,6 +277,8 @@ footer.credit a { color: inherit; }
       <ul>
         <li>拖曳旋轉，滾輪或雙指縮放，右鍵或雙指拖曳平移。</li>
         <li><b>點一下</b>肌肉：看名稱、層次、誰蓋住它。</li>
+        <li>選好肌肉後按 <b>▶</b>，模型會做出這塊肌肉負責的動作；紅色、藍色標記是它的起點和止點。</li>
+        <li>「動作查詢」：選一個動作，看哪些肌肉負責；「擺姿勢」：自己調整每個關節的角度。</li>
         <li><b>按兩下</b>肌肉：把它拆下來，看底下是什麼。</li>
         <li>左下角的層次按鈕可以一層一層剝開。</li>
         <li>「只看相鄰」會把上面那層變半透明，下面那層實心顯示。</li>
@@ -229,8 +286,8 @@ footer.credit a { color: inherit; }
     </div>
     <div class="card" id="card" hidden></div>
     <div class="update" id="upd" hidden></div>
+    <div class="scrim" id="scrim" hidden></div>
   </main>
-  <div class="scrim" id="scrim" hidden></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
@@ -280,6 +337,19 @@ footer.credit a { color: inherit; }
   scene.add(camera);
 
   const group = new THREE.Group(); scene.add(group);
+  // ---------- skeleton (one bone per body segment, rest pose = model pose)
+  const BONES = {}, boneList = [];
+  META.skel.forEach(b => {
+    const bone = new THREE.Bone(); bone.name = b.name;
+    const p = new THREE.Vector3(...b.pivot);
+    if (b.parent) { bone.position.copy(p).sub(new THREE.Vector3(...META.skel.find(x => x.name === b.parent).pivot)); BONES[b.parent].add(bone); }
+    else { bone.position.copy(p); group.add(bone); }
+    BONES[b.name] = bone; boneList.push(bone);
+  });
+  group.updateMatrixWorld(true);
+  const skeleton = new THREE.Skeleton(boneList);
+  const IDENT = new THREE.Matrix4();
+  function skin(mesh) { mesh.bindMode = 'detached'; mesh.bind(skeleton, IDENT); mesh.frustumCulled = false; return mesh; }
   const tendonCol = new THREE.Color('#efe6dc');
   const meshes = MU.map((m, i) => {
     const g = new THREE.BufferGeometry();
@@ -288,12 +358,16 @@ footer.credit a { color: inherit; }
     g.computeVertexNormals(); g.computeBoundingSphere();
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(m.nv * 3), 3));
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0, side: THREE.DoubleSide });
-    const mesh = new THREE.Mesh(g, mat);
+    const sw = new Uint8Array(bytes, m.w, m.nv * 8), si = new Uint16Array(m.nv * 4), sws = new Float32Array(m.nv * 4);
+    for (let v = 0; v < m.nv; v++) for (let k = 0; k < 4; k++) { si[v * 4 + k] = sw[v * 8 + k]; sws[v * 4 + k] = sw[v * 8 + 4 + k] / 255; }
+    g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+    g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
+    const mesh = new THREE.SkinnedMesh(g, mat);
+    group.add(mesh); skin(mesh);
     mesh.userData.i = i;
     m.flag = new Uint8Array(bytes, m.f, m.nv);
     m.center = g.boundingSphere.center.clone();
     m.covers = [];
-    group.add(mesh);
     return mesh;
   });
   MU.forEach((m, i) => m.cb.forEach(([o, pc]) => MU[o].covers.push([i, pc])));
@@ -304,14 +378,62 @@ footer.credit a { color: inherit; }
     g.setAttribute('position', new THREE.BufferAttribute(deq(b.p, b.nv), 3));
     g.setIndex(new THREE.BufferAttribute(new Uint32Array(bytes, b.i, b.ni), 1));
     g.computeVertexNormals();
-    boneMesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: tok('--bone'), roughness: 0.8 }));
-    boneMesh.visible = false; scene.add(boneMesh);
+    const seg = new Uint8Array(bytes, b.s, b.nv), si = new Uint16Array(b.nv * 4), sws = new Float32Array(b.nv * 4);
+    for (let v = 0; v < b.nv; v++) { si[v * 4] = seg[v]; sws[v * 4] = 1; }
+    g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+    g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
+    boneMesh = new THREE.SkinnedMesh(g, new THREE.MeshStandardMaterial({ color: tok('--bone'), roughness: 0.8 }));
+    group.add(boneMesh); skin(boneMesh);
+    boneMesh.visible = false;
   }
   $('#loading').remove();
   $('#count').textContent = new Set(MU.map(m => m.en)).size + ' 種、' + MU.length;
 
   // ---------- state
-  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0 };
+  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0, ct: -1, ctOn: [false, false, false], mode: null, act: null, att: true, pose: {}, poseVals: {}, poseSide: 'R', pickSide: 'R' };
+
+  // ---------- 起點／止點：骨頭上的附著區塊（紅 = 起點，藍 = 止點），永遠畫在最上層
+  const attMat = [
+    new THREE.MeshBasicMaterial({ color: '#e5484d', depthTest: false, transparent: true, opacity: 0.92, side: THREE.DoubleSide }),
+    new THREE.MeshBasicMaterial({ color: '#2f7de1', depthTest: false, transparent: true, opacity: 0.92, side: THREE.DoubleSide }),
+  ];
+  const attMeshes = (META.att || []).map(a => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(deq(a.p, a.nv), 3));
+    g.setIndex(new THREE.BufferAttribute(new Uint16Array(bytes, a.i, a.ni), 1));
+    const si = new Uint16Array(a.nv * 4), sws = new Float32Array(a.nv * 4);
+    for (let v = 0; v < a.nv; v++) { si[v * 4] = a.s; sws[v * 4] = 1; }
+    g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+    g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
+    const mesh = new THREE.SkinnedMesh(g, attMat[a.t]);
+    mesh.renderOrder = 10; group.add(mesh); skin(mesh); mesh.visible = false;
+    return mesh;
+  });
+  // ---------- 筋膜（0）、滑液囊（1）、腱鞘（2）：半透明，可開關、可點選
+  const CTM = META.ct || [];
+  const CT_COL = ['#efe4d2', '#6fbde3', '#b9a3ec'], CT_OP = [0.4, 0.75, 0.65];
+  const ctMeshes = CTM.map((c, k) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(deq(c.p, c.nv), 3));
+    g.setIndex(new THREE.BufferAttribute(c.u32 ? new Uint32Array(bytes, c.i, c.ni) : new Uint16Array(bytes, c.i, c.ni), 1));
+    g.computeVertexNormals(); g.computeBoundingSphere();
+    const sw = new Uint8Array(bytes, c.w, c.nv * 8), si = new Uint16Array(c.nv * 4), sws = new Float32Array(c.nv * 4);
+    for (let v = 0; v < c.nv; v++) for (let j = 0; j < 4; j++) { si[v * 4 + j] = sw[v * 8 + j]; sws[v * 4 + j] = sw[v * 8 + 4 + j] / 255; }
+    g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+    g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
+    const mat = new THREE.MeshStandardMaterial({ color: CT_COL[c.k], transparent: true, opacity: CT_OP[c.k], depthWrite: false, side: THREE.DoubleSide, roughness: 0.5 });
+    const mesh = new THREE.SkinnedMesh(g, mat);
+    mesh.renderOrder = 3; mesh.userData.ct = k; group.add(mesh); skin(mesh); mesh.visible = false;
+    c.center = g.boundingSphere.center.clone(); c.radius = g.boundingSphere.radius;
+    return mesh;
+  });
+  const ctGroups = [0, 1, 2].map(kind => {
+    const by = new Map();
+    CTM.forEach((c, k) => { if (c.k === kind) { if (!by.has(c.en)) by.set(c.en, []); by.get(c.en).push(k); } });
+    return [...by.values()].sort((a, b) => CTM[a[0]].zh.localeCompare(CTM[b[0]].zh, 'zh-Hant'));
+  });
+  const attOf = MU.map(() => []);
+  (META.att || []).forEach((a, k) => a.m.forEach(i => attOf[i].push(k)));
   const lastRemoved = [];
 
   function paint() {
@@ -330,21 +452,37 @@ footer.credit a { color: inherit; }
   function apply() {
     const rel = st.focus && st.sel >= 0 ? related(st.sel) : null;
     const above = rel ? new Set(MU[st.sel].cb.map(x => x[0])) : null;
+    const inv = st.act && !rel ? involved(st.act.key, st.act.side) : null;
     MU.forEach((m, i) => {
       const mesh = meshes[i], mat = mesh.material;
       let vis = !st.layersOff.has(m.layer) && !st.removed.has(i) && (!st.side || m.side === st.side || !m.side);
       if (rel) vis = rel.has(i) && (!st.side || m.side === st.side || !m.side);
+      if (inv && inv.has(i)) vis = true;
       if (i === st.sel) vis = true;
       mesh.visible = vis;
-      const ghost = rel && above.has(i);
-      mat.transparent = ghost; mat.opacity = ghost ? 0.28 : 1; mat.depthWrite = !ghost;
-      mat.color.set(i === st.sel ? '#5fb3d9' : '#ffffff');
-      mat.emissive.set(i === st.sel ? '#1d6f9a' : '#000000');
-      mat.emissiveIntensity = i === st.sel ? 0.5 : 0;
+      const ghost = (rel && above.has(i)) || (inv && !inv.has(i));
+      mat.transparent = !!ghost; mat.opacity = ghost ? (inv ? 0.08 : 0.28) : 1; mat.depthWrite = !ghost;
+      const role = inv && inv.has(i) ? (inv.get(i) ? 'p' : 'a') : '';
+      mat.color.set(i === st.sel ? '#5fb3d9' : role === 'p' ? '#ff8f8f' : role === 'a' ? '#ffd28a' : '#ffffff');
+      mat.emissive.set(i === st.sel ? '#1d6f9a' : role === 'p' ? '#a01c2c' : role === 'a' ? '#8a5a00' : '#000000');
+      mat.emissiveIntensity = i === st.sel ? 0.5 : role ? 0.45 : 0;
       mesh.renderOrder = ghost ? 2 : 0;
       const k = st.explode * 0.05 * (NL + 1 - m.layer);
       mesh.position.set(m.o[0] * k, m.o[1] * k, m.o[2] * k);
     });
+    const showAtt = st.sel >= 0 && st.att ? new Set(attOf[st.sel]) : null;
+    attMeshes.forEach((mesh, k) => {
+      mesh.visible = !!(showAtt && showAtt.has(k));
+    });
+    ctMeshes.forEach((mesh, k) => {
+      const c = CTM[k], sel = k === st.ct;
+      mesh.visible = sel || (st.ctOn[c.k] && (!st.side || c.side === st.side || !c.side));
+      mesh.material.color.set(sel ? '#5fb3d9' : CT_COL[c.k]);
+      mesh.material.opacity = sel ? 0.85 : CT_OP[c.k];
+      mesh.material.emissive.set(sel ? '#1d6f9a' : '#000000');
+      mesh.material.emissiveIntensity = sel ? 0.5 : 0;
+    });
+    document.querySelectorAll('[data-ct]').forEach(b => b.classList.toggle('on', st.ctOn[+b.dataset.ct]));
     renderChips(); renderList(); renderRemoved();
   }
 
@@ -383,11 +521,59 @@ footer.credit a { color: inherit; }
     MU.forEach((m, i) => { if (m.region === ri) { if (!names.has(m.en)) names.set(m.en, []); names.get(m.en).push(i); } });
     return { r, items: [...names.values()].sort((a, b) => MU[a[0]].layer - MU[b[0]].layer || MU[a[0]].zh.localeCompare(MU[b[0]].zh, 'zh-Hant')) };
   });
+  // ---------- 搜尋：俗稱、肌群名稱和常見說法（比對中文名）
+  const ALIAS = [
+    [['小腿肚', '小腿後側', '小腿三頭肌', '腓腸'], /腓腸肌|比目魚肌|跟腱|蹠肌/],
+    [['股四頭肌', '大腿前側', '四頭肌'], /股直肌|股外側肌|股內側肌|股中間肌/],
+    [['膕繩肌', '腿後肌', '大腿後側', '後大腿'], /股二頭肌|半腱肌|半膜肌/],
+    [['內收肌群', '大腿內側', '鼠蹊'], /內收|股薄肌|恥骨肌/],
+    [['旋轉肌袖', '肩袖', '旋轉袖', '肩旋轉肌'], /棘上肌|棘下肌|小圓肌|肩胛下肌/],
+    [['豎脊肌', '豎棘肌', '下背', '腰肌'], /髂肋肌|最長肌|棘肌（|^頸棘肌|^胸棘肌|^頭棘肌/],
+    [['腹肌', '六塊肌', '八塊肌', '肚子'], /腹直肌|腹外斜肌|腹內斜肌|腹橫肌/],
+    [['側腹', '腰側', '人魚線'], /腹外斜肌|腹內斜肌/],
+    [['核心'], /腹橫肌|多裂肌|腹內斜肌|橫膈膜|髂尾肌|恥尾肌/],
+    [['臀肌', '屁股', '臀部'], /臀大肌|臀中肌|臀小肌/],
+    [['深層外旋肌', '髖外旋肌', '深層臀肌'], /梨狀肌|孖肌|閉孔|股方肌/],
+    [['髂腰肌', '屈髖肌'], /髂肌|腰大肌/],
+    [['胸肌', '胸部'], /胸大肌|胸小肌/],
+    [['背肌', '上背'], /斜方肌|背闊肌|菱形肌|提肩胛肌/],
+    [['闊背肌', '翅膀'], /背闊肌/],
+    [['肩胛提肌'], /提肩胛肌/],
+    [['肩膀', '肩部'], /三角肌|棘上肌/],
+    [['手臂前側', '上臂前側'], /肱二頭肌|肱肌|喙肱肌/],
+    [['前臂屈肌', '前臂內側'], /屈腕|屈指|掌長肌|旋前圓肌|屈拇長肌/],
+    [['前臂伸肌', '前臂外側'], /伸腕|伸指|伸食指|伸小指|伸拇|外展拇長肌|肱橈肌/],
+    [['三頭', '掰掰肉', '蝴蝶袖', '手臂後側'], /肱三頭肌|肘肌/],
+    [['前臂肌'], /屈腕|伸腕|屈指|伸指|旋前|旋後|肱橈肌|掌長肌|拇長/],
+    [['大魚際', '拇指球'], /拇短肌|拇對掌肌|屈拇短肌|內收拇肌/],
+    [['小魚際'], /小指/],
+    [['脛前', '小腿前側'], /脛前肌|伸趾長肌|伸拇趾長肌|第三腓骨肌/],
+    [['腓骨肌', '小腿外側'], /腓骨長肌|腓骨短肌/],
+    [['足底', '腳底'], /足|趾短|蹠方肌|拇趾|小趾/],
+    [['咀嚼肌', '咬肌群'], /咬肌|顳肌|翼內肌|翼外肌/],
+    [['表情肌', '臉部'], /口輪匝|眼輪匝|顴|笑肌|降口角|降下唇|提上唇|提口角|頦肌|鼻肌|降眉間|皺眉|額肌|頰肌/],
+    [['眼肌', '眼外肌'], /直肌（眼）|斜肌（眼）|提上瞼肌/],
+    [['頸部', '脖子'], /胸鎖乳突肌|斜角肌|頸長肌|頭長肌|頸闊肌|頭夾肌|頸夾肌/],
+    [['斜角肌'], /斜角肌/],
+    [['舌骨肌', '舌骨上肌', '舌骨下肌'], /舌骨|二腹肌/],
+    [['呼吸肌', '肋間肌'], /橫膈膜|肋間|斜角肌|提肋/],
+    [['骨盆底', '凱格爾'], /尾骨肌|髂尾肌|恥尾肌|恥骨肛門肌|提肛|肛門外括約肌/],
+  ];
+  const norm = s => s.toLowerCase().replace(/[\s　（）()／、]/g, '').replace(/[肌群]/g, '');
+  function searchHit(m, q) {
+    const exact = ALIAS.find(([keys]) => keys.includes(q));
+    if (exact) return exact[1].test(m.zh);
+    if ((m.zh + m.en + m.la).toLowerCase().replace(/\s+/g, '').includes(q)) return true;
+    const nq = norm(q);
+    // 去掉「肌」後再比對（「內收肌」找得到「內收長肌」），但至少要剩兩個字，避免「腹肌」配到「二腹肌」
+    if (nq.length >= 2 && norm(m.zh).includes(nq)) return true;
+    return ALIAS.some(([keys, re]) => keys.some(k => k === q || (q.length >= 2 && (k.includes(q) || q.includes(k))) || (nq.length >= 2 && norm(k).includes(nq))) && re.test(m.zh));
+  }
   function renderList() {
-    const q = $('#q').value.trim().toLowerCase();
+    const q = $('#q').value.trim().toLowerCase().replace(/[\s　]+/g, '');
     const frag = document.createDocumentFragment();
     groups.forEach(g => {
-      const items = g.items.filter(ix => { const m = MU[ix[0]]; return !q || (m.zh + ' ' + m.en + ' ' + m.la).toLowerCase().includes(q); });
+      const items = g.items.filter(ix => !q || searchHit(MU[ix[0]], q));
       if (!items.length) return;
       const h = document.createElement('h3'); h.textContent = g.r + ' · ' + items.length; frag.appendChild(h);
       items.forEach(ix => {
@@ -400,6 +586,20 @@ footer.credit a { color: inherit; }
         frag.appendChild(b);
       });
     });
+    // 筋膜、滑液囊、腱鞘
+    for (const [kind, title] of [[0, '筋膜與支持帶'], [1, '滑液囊'], [2, '腱鞘']]) {
+      const items = ctGroups[kind].filter(ix => { const c = CTM[ix[0]]; return !q || (c.zh + c.en).toLowerCase().includes(q) || title.includes(q); });
+      if (!items.length) continue;
+      const h = document.createElement('h3'); h.textContent = title + ' · ' + items.length; frag.appendChild(h);
+      items.forEach(ix => {
+        const c = CTM[ix[0]], pickK = ix.find(k => CTM[k].side === (st.side || 'R')) ?? ix[0];
+        const b = document.createElement('button');
+        b.className = 'row' + (ix.includes(st.ct) ? ' on' : '');
+        b.innerHTML = `<span class="dot" style="background:${CT_COL[kind]}"></span><span class="nm"><b>${c.zh}</b><small>${c.en}</small></span><span class="lv">${['筋膜', '滑囊', '腱鞘'][kind]}</span>`;
+        b.onclick = () => { closeSheets(); selectCT(ix.includes(st.ct) && ix.length > 1 ? ix.find(k => k !== st.ct) : pickK, true); };
+        frag.appendChild(b);
+      });
+    }
     const list = $('#list'); const top = list.scrollTop;
     list.innerHTML = ''; list.appendChild(frag); list.scrollTop = top;
     if (!list.children.length) list.innerHTML = '<p class="empty" style="padding:16px">找不到符合的肌肉。試試中文全名或英文名的一部分。</p>';
@@ -417,13 +617,20 @@ footer.credit a { color: inherit; }
   }
   function renderCard() {
     const card = $('#card');
-    document.body.classList.toggle('card-open', st.sel >= 0);
-    if (st.sel < 0) { card.hidden = true; $('#hint').hidden = false; return; }
+    const mode = st.sel >= 0 ? 'muscle' : st.ct >= 0 ? 'ct' : st.mode === 'pick' ? 'pick' : st.act ? 'action' : st.mode === 'pose' ? 'pose' : null;
+    document.body.classList.toggle('card-open', !!mode);
+    document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', (b.dataset.tool === 'pick' && (mode === 'pick' || mode === 'action')) || (b.dataset.tool === 'pose' && mode === 'pose')));
+    if (!mode) { card.hidden = true; $('#hint').hidden = false; return; }
     $('#hint').hidden = true; card.hidden = false;
+    if (mode === 'ct') return renderCTCard(card);
+    if (mode === 'pick') return renderPicker(card);
+    if (mode === 'action') return renderActionCard(card);
+    if (mode === 'pose') return renderPose(card);
     const m = MU[st.sel];
     card.innerHTML = `
       <div class="hd">
         <button class="btn x" id="cx" aria-label="關閉">✕</button>
+        ${st.act ? `<button class="back" id="cback">← 回到「${actLabel(st.act)}」</button>` : ''}
         <h2>${label(m)}</h2>
         <div class="sub">${m.en}${m.la ? '<br><i>' + m.la + '</i>' : ''}</div>
         <div class="stats">
@@ -431,7 +638,9 @@ footer.credit a { color: inherit; }
           <div><small>直接露在表面</small><b>${m.exposed}%</b></div>
           <div><small>部位</small><b>${META.regions[m.region]}</b></div>
         </div>
+        <div class="moves" id="cmv"></div>
         <div class="acts">
+          <button class="btn ${st.att ? 'on' : ''}" id="ca" aria-pressed="${st.att}">起止點</button>
           <button class="btn ${st.focus ? 'on' : ''}" id="cf">只看相鄰</button>
           <button class="btn" id="cr">拆下這塊</button>
           <button class="btn" id="cz">鏡頭對準</button>
@@ -439,6 +648,27 @@ footer.credit a { color: inherit; }
       </div>
       <div class="bd" id="cbd"></div>`;
     const bd = card.querySelector('#cbd');
+    const mv = card.querySelector('#cmv');
+    if (m.a.length) {
+      m.a.forEach(k => {
+        const b = document.createElement('button');
+        const on = play.key === k && play.muscle === st.sel;
+        b.className = 'move' + (on ? ' on' : '');
+        b.innerHTML = `<span class="ic">${on ? '■' : '▶'}</span><span><b>${ACTIONS[k][0]}</b><small>${ACTIONS[k][1]}</small></span>`;
+        b.setAttribute('aria-pressed', on);
+        b.onclick = () => startAction(k, m.side, st.sel);
+        mv.appendChild(b);
+      });
+    }
+    const hf = document.createElement('h4'); hf.textContent = '功能'; bd.appendChild(hf);
+    bd.insertAdjacentHTML('beforeend', `<p class="fn">${m.fn || '—'}${m.a.length ? '' : '<br><span class="muted">這塊肌肉沒有明顯的關節動作，所以不做擺動示範。</span>'}</p>`);
+    const ha = document.createElement('h4'); ha.textContent = '起點與止點'; bd.appendChild(ha);
+    if (m.org.length || m.ins.length) {
+      bd.insertAdjacentHTML('beforeend', `<p class="fn att">
+        <span class="pin o"></span><b>起點</b>　${m.org.length ? m.org.join('、') : '—'}<br>
+        <span class="pin i"></span><b>止點</b>　${m.ins.length ? m.ins.join('、') : '—'}</p>
+        <p class="fn muted">${st.att ? '模型上紅色是起點、藍色是止點，會透過其他肌肉顯示出來。' : '按上方「起止點」可以在模型上標出附著位置。'}起點通常是收縮時不動的那一端。原始模型只標出長在骨頭上的附著點，附著在筋膜、腱膜或其他肌肉上的部分不會列出，所以有些肌肉的清單不完整。</p>`);
+    } else bd.insertAdjacentHTML('beforeend', '<p class="fn muted">原始模型沒有這塊肌肉的附著點資料。</p>');
     const h1 = document.createElement('h4'); h1.textContent = '被這些肌肉蓋住（在它上面）'; bd.appendChild(h1);
     if (m.cb.length) m.cb.forEach(([o, pc]) => bd.appendChild(relRow(o, pc)));
     else bd.insertAdjacentHTML('beforeend', '<p class="empty">沒有肌肉蓋在它上面，直接位於皮膚與筋膜下方。</p>');
@@ -449,19 +679,64 @@ footer.credit a { color: inherit; }
     if (m.sheath) note += '<br><br>腹直肌前方由腹外斜肌、腹內斜肌的腱膜（腹直肌鞘）包覆。腱膜不是肌腹，所以不算「被肌肉蓋住」。';
     if (m.fx) note += '<br><br>原始模型的斜方肌上部與下部名稱標反了，本頁已依實際位置更正。';
     bd.insertAdjacentHTML('beforeend', `<div class="note">${note}</div>`);
-    card.querySelector('#cx').onclick = () => select(-1);
+    card.querySelector('#cx').onclick = () => { if (st.act) { st.act = null; stopAction(true); } select(-1); };
+    if (st.act) card.querySelector('#cback').onclick = () => select(-1);
+    card.querySelector('#ca').onclick = () => { st.att = !st.att; apply(); renderCard(); };
     card.querySelector('#cf').onclick = () => { st.focus = !st.focus; apply(); renderCard(); };
     card.querySelector('#cr').onclick = () => removeMuscle(st.sel);
     card.querySelector('#cz').onclick = () => frame(st.sel);
   }
 
   function select(i, doFrame) {
+    if (play.key && play.muscle >= 0 && i !== play.muscle) stopAction(true);
+    if (i >= 0 && st.mode === 'pick') st.mode = null;
+    if (i >= 0) st.ct = -1;
     st.sel = i;
     if (i < 0) st.focus = false;
     if (i >= 0 && st.removed.has(i)) st.removed.delete(i);
     if (i >= 0 && st.layersOff.has(MU[i].layer) && !st.focus) st.layersOff.delete(MU[i].layer);
     apply(); renderCard();
     if (doFrame && i >= 0) frame(i, true);
+  }
+  // ---------- 筋膜／滑液囊／腱鞘的資訊卡
+  const CT_KIND = ['筋膜', '滑液囊', '腱鞘'];
+  function selectCT(k, doFrame) {
+    if (play.muscle >= 0) stopAction(true);
+    st.ct = k;
+    if (k >= 0) { st.sel = -1; st.focus = false; if (st.mode === 'pick') st.mode = null; }
+    apply(); renderCard();
+    if (doFrame && k >= 0) {
+      const c = CTM[k], dir = camera.position.clone().sub(controls.target).normalize();
+      tween(c.center.clone().addScaledVector(dir, Math.min(3.2, (c.radius * 4.5 + 0.3) / Math.sqrt(viewShift().vis))), c.center.clone());
+    }
+  }
+  function renderCTCard(card) {
+    const c = CTM[st.ct];
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" data-x aria-label="關閉">✕</button>
+        <h2>${c.zh}${c.side ? '（' + SIDE_ZH[c.side] + '）' : ''}</h2>
+        <div class="sub">${c.en}</div>
+        <div class="stats">
+          <div><small>種類</small><b><span class="pin" style="background:${CT_COL[c.k]}"></span>${CT_KIND[c.k]}</b></div>
+          <div><small>顯示全部${CT_KIND[c.k]}</small><b><button class="btn ${st.ctOn[c.k] ? 'on' : ''}" data-tog style="padding:2px 10px">${st.ctOn[c.k] ? '開' : '關'}</button></b></div>
+        </div>
+      </div>
+      <div class="bd">
+        <h4>功能</h4><p class="fn">${c.info}</p>
+        <h4>相鄰的肌肉</h4><div data-rel></div>
+        <div class="note">筋膜、滑液囊和腱鞘不算在肌肉的分層裡。它們是半透明的，打開後仍看得到底下的肌肉；在「顯示」裡可以分別開關。</div>
+      </div>`;
+    const rel = card.querySelector('[data-rel]');
+    if (c.rel.length) c.rel.forEach(i => {
+      const m = MU[i], b = document.createElement('button'); b.className = 'rel';
+      b.innerHTML = `<span class="dot" style="background:${layerHex(m.layer)}"></span><span class="nm">${label(m)}</span><span class="pc" style="grid-column: span 2">第 ${m.layer} 層</span>`;
+      b.onclick = () => select(i, true);
+      rel.appendChild(b);
+    });
+    else rel.innerHTML = '<p class="empty">附近沒有直接接觸的肌肉。</p>';
+    card.querySelector('[data-x]').onclick = () => selectCT(-1);
+    card.querySelector('[data-tog]').onclick = () => { st.ctOn[c.k] = !st.ctOn[c.k]; apply(); renderCard(); };
   }
   function removeMuscle(i) {
     st.removed.add(i); lastRemoved.push(i);
@@ -472,6 +747,7 @@ footer.credit a { color: inherit; }
   // ---------- camera
   let anim = null;
   function tween(toPos, toTarget, ms = 550) {
+    if (st.lock) return; // 鎖定視角：任何按鈕都不移動鏡頭
     const fp = camera.position.clone(), ft = controls.target.clone(), t0 = performance.now();
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     anim = now => {
@@ -484,7 +760,7 @@ footer.credit a { color: inherit; }
     const mesh = meshes[i], c = MU[i].center.clone().add(mesh.position);
     const r = Math.max(mesh.geometry.boundingSphere.radius, 0.05);
     const dir = keepDir ? camera.position.clone().sub(controls.target).normalize() : new THREE.Vector3(...MU[i].o);
-    tween(c.clone().addScaledVector(dir, Math.min(3.2, r * 5 + 0.35)), c);
+    tween(c.clone().addScaledVector(dir, Math.min(3.2, (r * 5 + 0.35) / Math.sqrt(viewShift().vis))), c);
   }
   const VIEWS = { front: [0, 0, 1], back: [0, 0, -1], left: [1, 0, 0], right: [-1, 0, 0] };
   const fitDist = () => {
@@ -515,24 +791,414 @@ footer.credit a { color: inherit; }
     const r = canvas.getBoundingClientRect();
     ndc.set((ev.clientX - r.left) / r.width * 2 - 1, -(ev.clientY - r.top) / r.height * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    const vis = meshes.filter(m => m.visible && !m.material.transparent);
+    const vis = meshes.filter(m => m.visible && !m.material.transparent).concat(ctMeshes.filter(m => m.visible));
     const hit = ray.intersectObjects(vis, false)[0];
-    return hit ? hit.object.userData.i : -1;
+    if (!hit) return -1;
+    return hit.object.userData.ct != null ? 100000 + hit.object.userData.ct : hit.object.userData.i;
   }
   let down = null, lastTap = 0, lastIdx = -2;
   canvas.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
   canvas.addEventListener('pointerup', e => {
     if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
     const i = pick(e), now = performance.now();
+    if (i >= 100000) { selectCT(i - 100000, false); lastIdx = -2; return; }
     if (i >= 0 && i === lastIdx && now - lastTap < 350) { removeMuscle(i); lastIdx = -2; return; }
     lastTap = now; lastIdx = i;
-    if (i >= 0) select(i, false); else if (st.sel >= 0 && !st.focus) select(-1);
+    if (i >= 0) select(i, false); else if (st.ct >= 0) selectCT(-1); else if (st.sel >= 0 && !st.focus) select(-1);
   });
   addEventListener('keydown', e => {
     if (e.target.matches('input')) return;
-    if (e.key === 'Escape') select(-1);
+    if (e.key === 'Escape') { if (st.ct >= 0) selectCT(-1); else select(-1); }
     if ((e.key === 'Delete' || e.key === 'Backspace') && st.sel >= 0) removeMuscle(st.sel);
   });
+
+  // ---------- 動作：每個動作 = 關節角度的變化（from → to），s = +1 左側、-1 右側
+  // 軸：x = 屈伸（前後擺）、z = 外展內收（左右擺）、y = 旋轉。角度單位：度。
+  const ACTIONS = {
+    sh_flex: ['肩屈曲', '手臂往前舉', s => [['arm', 'x', 0, -110]]],
+    sh_ext: ['肩伸展', '手臂往後擺', s => [['arm', 'x', -40, 40]]],
+    sh_abd: ['肩外展', '手臂往側邊舉起', s => [['arm', 'z', 0, 90 * s]]],
+    sh_add: ['肩內收', '手臂從側邊收回身體', s => [['arm', 'z', 70 * s, 0]]],
+    sh_ir: ['肩內旋', '手肘彎著，前臂往肚子轉', s => [['forearm', 'x', -90, -90], ['arm', 'y', 0, -60 * s]]],
+    sh_er: ['肩外旋', '手肘彎著，前臂往外轉', s => [['forearm', 'x', -90, -90], ['arm', 'y', 0, 50 * s]]],
+    el_flex: ['肘屈曲', '彎手肘', s => [['forearm', 'x', 0, -115]]],
+    el_ext: ['肘伸展', '伸直手肘', s => [['forearm', 'x', -110, 0]]],
+    pron: ['前臂旋前', '手掌轉向下', s => [['forearm', 'x', -90, -90], ['forearm', 'y', 0, -80 * s]]],
+    sup: ['前臂旋後', '手掌轉向上', s => [['forearm', 'x', -90, -90], ['forearm', 'y', -80 * s, 0]]],
+    wr_flex: ['腕屈曲', '手掌往前臂內側彎', s => [['hand', 'x', 0, -65]]],
+    wr_ext: ['腕伸展', '手背往上翹', s => [['hand', 'x', 0, 55]]],
+    wr_rad: ['腕橈偏', '往拇指側偏', s => [['hand', 'z', 0, 20 * s]]],
+    wr_uln: ['腕尺偏', '往小指側偏', s => [['hand', 'z', 0, -30 * s]]],
+    fi_flex: ['手指屈曲', '握拳', s => [['fingers', 'x', 0, -85]]],
+    fi_ext: ['手指伸展', '張開伸直手指', s => [['fingers', 'x', -60, 10]]],
+    th_flex: ['拇指屈曲', '拇指往掌心彎', s => [['thumb', 'z', 0, -35 * s], ['thumb', 'x', 0, -15]]],
+    th_ext: ['拇指伸展', '拇指往外張開', s => [['thumb', 'z', 0, 25 * s]]],
+    th_abd: ['拇指外展', '拇指往掌心前方張開', s => [['thumb', 'x', 0, -40]]],
+    th_add: ['拇指內收', '拇指夾回食指旁', s => [['thumb', 'x', -35, 0]]],
+    hip_flex: ['髖屈曲', '抬大腿', s => [['thigh', 'x', 0, -80], ['leg', 'x', 0, 60]]],
+    hip_ext: ['髖伸展', '大腿往後擺', s => [['thigh', 'x', -35, 20]]],
+    hip_abd: ['髖外展', '腿往側邊打開', s => [['thigh', 'z', 0, 40 * s]]],
+    hip_add: ['髖內收', '腿從側邊收回（夾腿）', s => [['thigh', 'z', 35 * s, -5 * s]]],
+    hip_ir: ['髖內旋', '膝蓋彎著，小腿往外擺', s => [['leg', 'x', 90, 90], ['thigh', 'y', 0, -35 * s]]],
+    hip_er: ['髖外旋', '膝蓋彎著，小腿往內擺', s => [['leg', 'x', 90, 90], ['thigh', 'y', 0, 40 * s]]],
+    kn_flex: ['膝屈曲', '彎膝蓋', s => [['leg', 'x', 0, 105]]],
+    kn_ext: ['膝伸展', '伸直膝蓋', s => [['leg', 'x', 90, 0]]],
+    an_dorsi: ['踝背屈', '勾腳尖', s => [['foot', 'x', 0, -22]]],
+    an_plan: ['踝蹠屈', '踮腳、腳尖往下', s => [['foot', 'x', 0, 40]]],
+    an_inv: ['足內翻', '腳底轉向內側', s => [['foot', 'z', 0, -25 * s]]],
+    an_ev: ['足外翻', '腳底轉向外側', s => [['foot', 'z', 0, 15 * s]]],
+    to_flex: ['腳趾屈曲', '腳趾往下抓', s => [['toes', 'x', 0, 30]]],
+    to_ext: ['腳趾伸展', '腳趾往上翹', s => [['toes', 'x', 0, -35]]],
+    tr_flex: ['軀幹前屈', '彎腰', s => [['lumbar', 'x', 0, 20], ['thorax', 'x', 0, 22]]],
+    tr_ext: ['軀幹伸展', '挺胸後仰', s => [['lumbar', 'x', 0, -12], ['thorax', 'x', 0, -12]]],
+    tr_lat: ['軀幹側屈', '往同側彎', s => [['lumbar', 'z', 0, -12 * s], ['thorax', 'z', 0, -12 * s]]],
+    tr_rot_same: ['軀幹旋轉（轉向同側）', '上半身轉向這塊肌肉這一側', s => [['lumbar', 'y', 0, 8 * s], ['thorax', 'y', 0, 24 * s]]],
+    tr_rot_opp: ['軀幹旋轉（轉向對側）', '上半身轉向另一側', s => [['lumbar', 'y', 0, -8 * s], ['thorax', 'y', 0, -24 * s]]],
+    nk_flex: ['頸前屈', '低頭', s => [['neck', 'x', 0, 25], ['head', 'x', 0, 15]]],
+    nk_ext: ['頸伸展', '抬頭後仰', s => [['neck', 'x', 0, -25], ['head', 'x', 0, -15]]],
+    nk_lat: ['頸側屈', '頭往同側肩膀倒', s => [['neck', 'z', 0, -22 * s], ['head', 'z', 0, -10 * s]]],
+    nk_rot_same: ['頸旋轉（轉向同側）', '頭轉向這一側', s => [['neck', 'y', 0, 35 * s], ['head', 'y', 0, 25 * s]]],
+    nk_rot_opp: ['頸旋轉（轉向對側）', '頭轉向另一側', s => [['neck', 'y', 0, -35 * s], ['head', 'y', 0, -25 * s]]],
+    jw_open: ['張嘴', '下巴往下', s => [['jaw', 'x', 0, 22]]],
+    jw_close: ['閉嘴（咬合）', '下巴往上', s => [['jaw', 'x', 22, 0]]],
+    sc_elev: ['肩胛上提', '聳肩', s => [['scap', 'z', 0, 12 * s]]],
+    sc_dep: ['肩胛下壓', '肩膀往下沉', s => [['scap', 'z', 0, -7 * s]]],
+    sc_ret: ['肩胛後縮', '把肩胛骨往脊椎夾', s => [['scap', 'y', 0, 14 * s]]],
+    sc_pro: ['肩胛前伸', '把肩膀往前推', s => [['scap', 'y', 0, -14 * s]]],
+  };
+  const SIDED = new Set(['scap', 'arm', 'forearm', 'hand', 'fingers', 'thumb', 'thigh', 'leg', 'foot', 'toes']);
+  const play = { key: null, side: '', muscle: -1, t0: 0 };
+  const DEG = Math.PI / 180, qx = new THREE.Quaternion(), qy = new THREE.Quaternion(), qz = new THREE.Quaternion();
+  const AX = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
+  function poseBones(key, sideLetter, p) {
+    const ang = {};
+    for (const n in st.pose) ang[n] = { ...st.pose[n] };
+    if (key) {
+      const s = sideLetter === 'L' ? 1 : -1, S = sideLetter || 'R';
+      for (const [b, ax, from, to] of ACTIONS[key][2](sideLetter ? s : 1)) {
+        const name = SIDED.has(b) ? b + '_' + S : b;
+        (ang[name] ||= { x: 0, y: 0, z: 0 })[ax] += from + (to - from) * p;
+      }
+    }
+    for (const bone of boneList) {
+      const a = ang[bone.name];
+      if (!a) { bone.quaternion.identity(); continue; }
+      qz.setFromAxisAngle(AX.z, a.z * DEG); qx.setFromAxisAngle(AX.x, a.x * DEG); qy.setFromAxisAngle(AX.y, a.y * DEG);
+      bone.quaternion.copy(qz).multiply(qx).multiply(qy);
+    }
+  }
+  const PERIOD = 2600;
+  function startAction(key, side, muscle = -1) {
+    if (play.key === key && play.side === side && play.muscle === muscle) { stopAction(); return; }
+    play.key = key; play.side = side; play.muscle = muscle; play.t0 = performance.now();
+    frameAction(side, key);
+    renderCard();
+  }
+  // 鏡頭退到能看清整個動作：屈伸從側面看，外展、旋轉從正面看
+  const VIEW_OF = {
+    arm: [0.15, 1.6], forearm: [-0.05, 1.3], hand: [-0.25, 1.0], fingers: [-0.3, 0.9], thumb: [-0.3, 0.9], scap: [0, 1.4],
+    thigh: [-0.3, 2.6], leg: [-0.2, 1.9], foot: [0, 1.0], toes: [0, 0.8],
+    lumbar: [0, 0], thorax: [0, 0], neck: [0.05, 0.9], head: [0.05, 0.9], jaw: [0, 0.7],
+  };
+  function frameAction(sideLetter, key) {
+    const m = { side: sideLetter }, s = m.side === 'L' ? 1 : -1, S = m.side || 'R';
+    const keys = ACTIONS[key][2](m.side ? s : 1);
+    const [b, ax] = keys[keys.length - 1];
+    const name = SIDED.has(b) ? b + '_' + S : b;
+    const [dy, dist] = VIEW_OF[b] || [0, 0];
+    let target, d;
+    if (!dist) { target = viewTarget(); d = fitDist() / Math.sqrt(viewShift().vis); }
+    else {
+      target = new THREE.Vector3(...META.skel.find(x => x.name === name).pivot); target.y += dy;
+      if (b === 'thigh') target.x *= 0.5;
+      d = dist * Math.max(1, 0.8 / Math.min(1, camera.aspect)) / Math.sqrt(viewShift().vis);
+    }
+    const side = m.side ? s : 1;
+    const dir = ax === 'x' ? new THREE.Vector3(side * 0.94, 0.08, 0.33) : new THREE.Vector3(side * 0.15, 0.1, 0.98);
+    tween(target.clone().addScaledVector(dir.normalize(), d), target);
+  }
+  function stopAction(silent) { play.key = null; play.muscle = -1; poseBones(null); setBulge([], 0); if (!silent) renderCard(); }
+  function tickAction(now) {
+    if (!play.key) return;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const t = ((now - play.t0) % PERIOD) / PERIOD;
+    const p = reduce ? 1 : (1 - Math.cos(t * Math.PI * 2)) / 2;
+    poseBones(play.key, play.side, p);
+    const who = play.muscle >= 0 ? [play.muscle] : st.act ? [...involved(st.act.key, st.act.side).keys()] : [];
+    setBulge(who, p);
+  }
+
+  // ---------- 收縮時肌腹鼓起：沿肌肉長軸算出往外的位移（中段最大、兩端和肌腱為 0），用 morph target 套上
+  const BULGE = 0.3, BULGE_MAX = 0.007;
+  function ensureBulge(i) {
+    const mesh = meshes[i], g = mesh.geometry;
+    if (g.userData.bulge) return;
+    const pos = g.attributes.position.array, n = pos.length / 3, flag = MU[i].flag;
+    const c = new THREE.Vector3();
+    for (let v = 0; v < n; v++) c.x += pos[v * 3], c.y += pos[v * 3 + 1], c.z += pos[v * 3 + 2];
+    c.multiplyScalar(1 / n);
+    // principal axis by power iteration on the covariance matrix
+    const C = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    for (let v = 0; v < n; v++) {
+      const d = [pos[v * 3] - c.x, pos[v * 3 + 1] - c.y, pos[v * 3 + 2] - c.z];
+      for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) C[a * 3 + b] += d[a] * d[b];
+    }
+    let ax = new THREE.Vector3(0.3, 1, 0.2).normalize();
+    for (let it = 0; it < 30; it++) {
+      ax.set(C[0] * ax.x + C[1] * ax.y + C[2] * ax.z, C[3] * ax.x + C[4] * ax.y + C[5] * ax.z, C[6] * ax.x + C[7] * ax.y + C[8] * ax.z).normalize();
+    }
+    let lo = Infinity, hi = -Infinity;
+    const proj = new Float32Array(n), p = new THREE.Vector3(), r = new THREE.Vector3();
+    for (let v = 0; v < n; v++) { p.fromArray(pos, v * 3).sub(c); proj[v] = p.dot(ax); lo = Math.min(lo, proj[v]); hi = Math.max(hi, proj[v]); }
+    const disp = new Float32Array(n * 3);
+    for (let v = 0; v < n; v++) {
+      if (flag[v]) continue;
+      const t = (proj[v] - lo) / (hi - lo || 1);
+      p.fromArray(pos, v * 3).sub(c);
+      r.copy(p).addScaledVector(ax, -proj[v]);
+      r.multiplyScalar(BULGE * Math.sin(Math.PI * t));
+      if (r.length() > BULGE_MAX) r.setLength(BULGE_MAX);
+      disp[v * 3] = r.x; disp[v * 3 + 1] = r.y; disp[v * 3 + 2] = r.z;
+    }
+    g.morphAttributes.position = [new THREE.BufferAttribute(disp, 3)];
+    g.morphTargetsRelative = true;
+    g.userData.bulge = true;
+    mesh.updateMorphTargets();
+    mesh.material.needsUpdate = true;
+  }
+  let bulging = new Set();
+  function setBulge(list, p) {
+    const next = new Set(list);
+    for (const i of bulging) if (!next.has(i) && meshes[i].morphTargetInfluences) meshes[i].morphTargetInfluences[0] = 0;
+    for (const i of next) { ensureBulge(i); meshes[i].morphTargetInfluences[0] = p; }
+    bulging = next;
+  }
+
+  // ---------- 用動作找肌肉
+  const PICK = [
+    ['肩', ['sh_flex', 'sh_ext', 'sh_abd', 'sh_add', 'sh_ir', 'sh_er']],
+    ['肩胛', ['sc_elev', 'sc_dep', 'sc_ret', 'sc_pro']],
+    ['肘與前臂', ['el_flex', 'el_ext', 'pron', 'sup']],
+    ['腕', ['wr_flex', 'wr_ext', 'wr_rad', 'wr_uln']],
+    ['手指與拇指', ['fi_flex', 'fi_ext', 'th_flex', 'th_ext', 'th_abd', 'th_add']],
+    ['髖', ['hip_flex', 'hip_ext', 'hip_abd', 'hip_add', 'hip_ir', 'hip_er']],
+    ['膝', ['kn_flex', 'kn_ext']],
+    ['踝與腳', ['an_dorsi', 'an_plan', 'an_inv', 'an_ev', 'to_flex', 'to_ext']],
+    ['軀幹', ['tr_flex', 'tr_ext', 'tr_lat', 'tr_rot_same']],
+    ['頸', ['nk_flex', 'nk_ext', 'nk_lat', 'nk_rot_same']],
+    ['下顎', ['jw_open', 'jw_close']],
+  ];
+  const BOTH = new Set(['tr_flex', 'tr_ext', 'nk_flex', 'nk_ext', 'jw_open', 'jw_close']);
+  const SIDE_ZH = { L: '左', R: '右' };
+  function actLabel(a) {
+    const k = a.key, n = ACTIONS[k][0];
+    if (BOTH.has(k)) return n;
+    if (/_rot_same$/.test(k)) return n.replace(/（轉向同側）/, '') + '（轉向' + SIDE_ZH[a.side] + '）';
+    if (/^(tr_lat|nk_lat)$/.test(k)) return n + '（往' + SIDE_ZH[a.side] + '）';
+    return SIDE_ZH[a.side] + n;
+  }
+  function pickLabel(k) { return ACTIONS[k][0].replace(/（轉向同側）/, ''); }
+  // Map<muscle index, isPrimary>
+  function involved(key, side) {
+    const out = new Map(), other = side === 'L' ? 'R' : 'L';
+    const rot = /_rot_same$/.test(key) ? key.replace(/_same$/, '') : null;
+    MU.forEach((m, i) => {
+      let k = null;
+      if (rot) { if (m.side === side && m.a.includes(rot + '_same')) k = rot + '_same'; else if (m.side === other && m.a.includes(rot + '_opp')) k = rot + '_opp'; }
+      else if (m.a.includes(key) && (BOTH.has(key) || m.side === side || !m.side)) k = key;
+      if (k) out.set(i, m.a[0] === k);
+    });
+    return out;
+  }
+  function openTool(mode) {
+    closeSheets();
+    if (st.sel >= 0) { st.sel = -1; st.focus = false; }
+    st.ct = -1;
+    if (play.muscle >= 0) stopAction(true);
+    const wasOpen = st.mode === mode && !st.act;
+    if (st.act) { st.act = null; stopAction(true); }
+    st.mode = wasOpen ? null : mode;
+    apply(); renderCard();
+  }
+  function chooseAction(key) {
+    st.act = { key, side: st.pickSide }; st.mode = null;
+    apply(); startAction(key, BOTH.has(key) ? '' : st.pickSide);
+  }
+  function renderPicker(card) {
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" data-x aria-label="關閉">✕</button>
+        <h2>用動作找肌肉</h2>
+        <div class="sub">選一個動作，負責的肌肉會亮起來並播放動作。</div>
+        <div class="seg" role="group" aria-label="哪一側">
+          <button class="btn ${st.pickSide === 'R' ? 'on' : ''}" data-ps="R">右側</button><button class="btn ${st.pickSide === 'L' ? 'on' : ''}" data-ps="L">左側</button>
+        </div>
+      </div>
+      <div class="bd">${PICK.map(([g, keys]) => `<h4>${g}</h4><div class="pick">${keys.map(k => `<button class="pk" data-k="${k}"><b>${pickLabel(k)}</b><small>${ACTIONS[k][1]}</small></button>`).join('')}</div>`).join('')}</div>`;
+    card.querySelector('[data-x]').onclick = () => { st.mode = null; renderCard(); };
+    card.querySelectorAll('[data-ps]').forEach(b => b.onclick = () => { st.pickSide = b.dataset.ps; renderCard(); });
+    card.querySelectorAll('[data-k]').forEach(b => b.onclick = () => chooseAction(b.dataset.k));
+  }
+  function renderActionCard(card) {
+    const a = st.act, inv = involved(a.key, a.side);
+    const list = [...inv.entries()].map(([i, p]) => ({ i, p })).sort((x, y) => (y.p - x.p) || (MU[x.i].layer - MU[y.i].layer));
+    const on = play.key === a.key && play.muscle < 0;
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" data-x aria-label="關閉">✕</button>
+        <button class="back" data-back>← 選其他動作</button>
+        <h2>${actLabel(a)}</h2>
+        <div class="sub">${ACTIONS[a.key][1]}。<span class="pin p"></span>主要肌肉　<span class="pin a"></span>輔助肌肉，其他肌肉變透明。</div>
+        <div class="moves"><button class="move ${on ? 'on' : ''}" data-play><span class="ic">${on ? '■' : '▶'}</span><span><b>${on ? '停止' : '播放動作'}</b><small>${ACTIONS[a.key][0]}</small></span></button></div>
+      </div>
+      <div class="bd"></div>`;
+    const bd = card.querySelector('.bd');
+    const sec = (title, rows) => {
+      if (!rows.length) return;
+      const h = document.createElement('h4'); h.textContent = title + ' · ' + rows.length; bd.appendChild(h);
+      rows.forEach(({ i }) => {
+        const m = MU[i], b = document.createElement('button'); b.className = 'rel';
+        b.innerHTML = `<span class="dot" style="background:${layerHex(m.layer)}"></span><span class="nm">${label(m)}</span><span class="pc" style="grid-column: span 2">第 ${m.layer} 層</span>`;
+        b.onclick = () => select(i, false);
+        bd.appendChild(b);
+      });
+    };
+    sec('主要肌肉', list.filter(x => x.p)); sec('輔助肌肉', list.filter(x => !x.p));
+    if (!list.length) bd.insertAdjacentHTML('beforeend', '<p class="empty">目前的資料裡沒有對應這個動作的肌肉。</p>');
+    bd.insertAdjacentHTML('beforeend', '<div class="note">「主要」是這塊肌肉最主要的功能；「輔助」是它也會參與、但不是主力的動作。實際上每個動作都由多塊肌肉合作，力量分配會隨姿勢改變。</div>');
+    card.querySelector('[data-x]').onclick = () => { st.act = null; stopAction(true); apply(); renderCard(); };
+    card.querySelector('[data-back]').onclick = () => { st.act = null; stopAction(true); st.mode = 'pick'; apply(); renderCard(); };
+    card.querySelector('[data-play]').onclick = () => startAction(a.key, BOTH.has(a.key) ? '' : a.side);
+  }
+
+  // ---------- 自由擺姿勢（角度以解剖學方向為正）
+  // [軸, 名稱, 最小, 最大, 正負號：數字或 's'（左 +1 右 -1）、'-s']
+  const JOINTS = [
+    ['arm', '肩', true, [['x', '屈曲（往前舉）', -50, 180, -1], ['z', '外展（往側舉）', -20, 170, 's'], ['y', '內旋', -80, 70, '-s']]],
+    ['scap', '肩胛', true, [['z', '上提', -8, 15, 's'], ['y', '後縮', -15, 15, 's']]],
+    ['forearm', '肘與前臂', true, [['x', '屈曲', 0, 145, -1], ['y', '旋前', 0, 85, '-s']]],
+    ['hand', '腕', true, [['x', '屈曲', -70, 80, -1], ['z', '橈偏', -30, 20, 's']]],
+    ['fingers', '手指', true, [['x', '屈曲（握拳）', -20, 90, -1]]],
+    ['thumb', '拇指', true, [['z', '屈曲', -20, 45, '-s'], ['x', '外展', 0, 45, -1]]],
+    ['thigh', '髖', true, [['x', '屈曲（抬腿）', -30, 120, -1], ['z', '外展', -20, 45, 's'], ['y', '內旋', -45, 45, '-s']]],
+    ['leg', '膝', true, [['x', '屈曲', 0, 140, 1]]],
+    ['foot', '踝', true, [['x', '蹠屈（腳尖往下）', -25, 50, 1], ['z', '內翻', -15, 30, '-s']]],
+    ['toes', '腳趾', true, [['x', '屈曲', -40, 35, 1]]],
+    ['trunk', '軀幹', false, [['x', '前屈', -25, 80, 1], ['z', '側彎（往右為正）', -40, 40, 1], ['y', '旋轉（往左為正）', -45, 45, 1]]],
+    ['neckhead', '頸', false, [['x', '低頭', -60, 60, 1], ['z', '側彎（往右為正）', -45, 45, 1], ['y', '轉頭（往左為正）', -80, 80, 1]]],
+    ['jaw', '下顎', false, [['x', '張嘴', 0, 30, 1]]],
+  ];
+  const SPLIT = { trunk: [['lumbar', 0.4], ['thorax', 0.6]], neckhead: [['neck', 0.6], ['head', 0.4]] };
+  function poseToRaw() {
+    const raw = {};
+    for (const [b, , sided, dofs] of JOINTS) {
+      for (const S of sided ? ['L', 'R'] : ['']) {
+        const v = st.poseVals[b + (S ? '_' + S : '')]; if (!v) continue;
+        const s = S === 'L' ? 1 : -1;
+        for (const [ax, , , , sg] of dofs) {
+          if (!v[ax]) continue;
+          const mult = sg === 's' ? s : sg === '-s' ? -s : sg;
+          const targets = SPLIT[b] || [[b + (S ? '_' + S : ''), 1]];
+          for (const [name, f] of targets) (raw[name] ||= { x: 0, y: 0, z: 0 })[ax] += v[ax] * mult * f;
+        }
+      }
+    }
+    st.pose = raw;
+    if (!play.key) poseBones(null);
+  }
+  const both = (b, v) => ({ [b + '_L']: { ...v }, [b + '_R']: { ...v } });
+  const PRESETS = [
+    ['站立', {}],
+    ['雙手上舉', { ...both('arm', { z: 165 }) }],
+    ['手臂平舉', { ...both('arm', { z: 88 }) }],
+    ['坐姿', { ...both('thigh', { x: 90 }), ...both('leg', { x: 90 }), ...both('arm', { x: 20 }), ...both('forearm', { x: 70 }) }],
+    ['跑步', { arm_R: { x: 55 }, forearm_R: { x: 90 }, arm_L: { x: -35 }, forearm_L: { x: 80 }, thigh_L: { x: 65 }, leg_L: { x: 95 }, thigh_R: { x: -20 }, leg_R: { x: 55 }, trunk: { x: 8 } }],
+    ['深蹲', { ...both('thigh', { x: 105, z: 15 }), ...both('leg', { x: 120 }), ...both('foot', { x: -20 }), ...both('arm', { x: 90 }), trunk: { x: 35 } }],
+    ['揮手', { arm_R: { z: 120 }, forearm_R: { x: 60 }, hand_R: { z: 15 } }],
+  ];
+  function renderPose(card) {
+    const S = st.poseSide;
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" data-x aria-label="關閉">✕</button>
+        <h2>擺姿勢</h2>
+        <div class="sub">拖曳滑桿調整關節角度，可以和肌肉動作一起使用。</div>
+        <div class="pick presets">${PRESETS.map((p, k) => `<button class="pk sm" data-pre="${k}"><b>${p[0]}</b></button>`).join('')}</div>
+        <div class="seg" role="group" aria-label="四肢哪一側">
+          <span class="lab">四肢</span><button class="btn ${S === 'R' ? 'on' : ''}" data-ps="R">右側</button><button class="btn ${S === 'L' ? 'on' : ''}" data-ps="L">左側</button>
+        </div>
+      </div>
+      <div class="bd">${JOINTS.map(([b, zh, sided, dofs]) => {
+        const key = b + (sided ? '_' + S : ''), v = st.poseVals[key] || {};
+        return `<h4>${sided ? SIDE_ZH[S] : ''}${zh}</h4>` + dofs.map(([ax, nm, lo, hi]) => `
+          <label class="sl"><span>${nm}</span><input type="range" id="pz-${key}-${ax}" min="${lo}" max="${hi}" step="1" value="${v[ax] || 0}" data-j="${key}" data-ax="${ax}"><output>${v[ax] || 0}°</output></label>`).join('');
+      }).join('')}</div>`;
+    card.querySelector('[data-x]').onclick = () => { st.mode = null; renderCard(); };
+    card.querySelectorAll('[data-ps]').forEach(b => b.onclick = () => { st.poseSide = b.dataset.ps; renderCard(); });
+    card.querySelectorAll('[data-pre]').forEach(b => b.onclick = () => {
+      st.poseVals = JSON.parse(JSON.stringify(PRESETS[+b.dataset.pre][1])); poseToRaw(); renderCard();
+      const t = viewTarget(); t.y -= 0.05;
+      tween(t.clone().addScaledVector(new THREE.Vector3(-0.55, 0.12, 0.83).normalize(), fitDist() / Math.sqrt(viewShift().vis)), t);
+    });
+    card.querySelectorAll('input[data-j]').forEach(inp => inp.oninput = () => {
+      const v = (st.poseVals[inp.dataset.j] ||= {}); v[inp.dataset.ax] = +inp.value;
+      inp.nextElementSibling.textContent = inp.value + '°';
+      poseToRaw();
+    });
+  }
+
+  // ---------- 模型精細度：精細版是另一個檔案，選了才下載
+  const HD_URL = '__HDURL__';
+  const stdGeo = meshes.map(m => m.geometry), stdFlag = MU.map(m => m.flag), stdNv = MU.map(m => m.nv);
+  let hdGeo = null, hdFlag = null, hdNv = null, hdLoading = false, quality = 'std';
+  function setQualityUI(msg) {
+    document.querySelectorAll('[data-q]').forEach(b => b.classList.toggle('on', b.dataset.q === quality));
+    $('#hdBtn').textContent = msg || '精細';
+  }
+  function useGeometry(q) {
+    const G = q === 'hd' ? hdGeo : stdGeo, F = q === 'hd' ? hdFlag : stdFlag, N = q === 'hd' ? hdNv : stdNv;
+    setBulge([], 0);
+    meshes.forEach((mesh, i) => { mesh.geometry = G[i]; MU[i].flag = F[i]; MU[i].nv = N[i]; mesh.updateMorphTargets(); mesh.material.needsUpdate = true; });
+    quality = q; paint(); setQualityUI();
+    try { localStorage.setItem('atlas-quality', q); } catch (e) {}
+  }
+  async function loadHD() {
+    if (hdGeo) return useGeometry('hd');
+    if (hdLoading) return;
+    hdLoading = true; setQualityUI('精細（下載中…）');
+    try {
+      const res = await fetch(HD_URL);
+      if (!res.ok) throw new Error(res.status);
+      // .bin = gzip 原始檔；.txt = 同一份 gzip 的 base64（給只能放文字檔的地方用）
+      const gz = HD_URL.endsWith('.txt') ? new Blob([Uint8Array.from(atob((await res.text()).trim()), c => c.charCodeAt(0))]).stream() : res.body;
+      const buf = await new Response(gz.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+      const len = new DataView(buf).getUint32(0, true);
+      const list = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, len)));
+      const base = 4 + len + ((4 - (4 + len) % 4) % 4);
+      hdGeo = []; hdFlag = []; hdNv = [];
+      list.forEach((h, i) => {
+        const g = new THREE.BufferGeometry();
+        const qv = new Uint16Array(buf, base + h.p, h.nv * 3), f = new Float32Array(h.nv * 3);
+        for (let k = 0; k < f.length; k++) { const a = k % 3; f[k] = META.min[a] + qv[k] / 65535 * META.size[a]; }
+        g.setAttribute('position', new THREE.BufferAttribute(f, 3));
+        g.setIndex(new THREE.BufferAttribute(h.u32 ? new Uint32Array(buf, base + h.i, h.ni) : new Uint16Array(buf, base + h.i, h.ni), 1));
+        g.computeVertexNormals(); g.computeBoundingSphere();
+        g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(h.nv * 3), 3));
+        const sw = new Uint8Array(buf, base + h.w, h.nv * 8), si = new Uint16Array(h.nv * 4), sws = new Float32Array(h.nv * 4);
+        for (let v = 0; v < h.nv; v++) for (let k = 0; k < 4; k++) { si[v * 4 + k] = sw[v * 8 + k]; sws[v * 4 + k] = sw[v * 8 + 4 + k] / 255; }
+        g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+        g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
+        hdGeo.push(g); hdFlag.push(new Uint8Array(buf, base + h.f, h.nv)); hdNv.push(h.nv);
+      });
+      hdLoading = false;
+      useGeometry('hd');
+    } catch (e) {
+      hdLoading = false; quality = 'std';
+      setQualityUI('精細（下載失敗，請連網後再試）');
+    }
+  }
+  document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => b.dataset.q === 'hd' ? loadHD() : useGeometry('std'));
+  try { if (localStorage.getItem('atlas-quality') === 'hd') setTimeout(loadHD, 300); } catch (e) {}
 
   // ---------- mobile sheets
   function closeSheets() { $('#toolbar').classList.remove('open'); $('#index').classList.remove('open'); $('#scrim').hidden = true; }
@@ -540,6 +1206,24 @@ footer.credit a { color: inherit; }
   $('#mList').onclick = () => { openSheet($('#index')); renderList(); };
   $('#mOpts').onclick = () => openSheet($('#toolbar'));
   $('#scrim').onclick = closeSheets;
+  document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => openTool(b.dataset.tool));
+  // ---------- 鎖定視角：鏡頭只聽手指／滑鼠，按鈕不會自動轉正或拉近
+  function setLock(on, save) {
+    st.lock = on;
+    document.querySelectorAll('[data-lock]').forEach(b => {
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+      b.title = on ? '視角已鎖定：按鈕不會移動鏡頭（再按一次解鎖）' : '鎖定視角：按任何按鈕都不會移動鏡頭';
+      const sh = b.querySelector('.shackle'); if (sh) sh.setAttribute('d', on ? 'M8 11V7a4 4 0 0 1 8 0v4' : 'M8 11V7a4 4 0 0 1 7.5-2');
+      if (!b.querySelector('svg')) b.textContent = on ? '已鎖定' : '鎖定視角';
+    });
+    document.querySelectorAll('[data-view]').forEach(b => { b.disabled = on; });
+    if (on) anim = null;
+    try { lastOff = ''; } catch (e) {} // 載入時 resize 還沒定義，略過
+    if (save) try { localStorage.setItem('atlas-lock', on ? '1' : ''); } catch (e) {}
+  }
+  document.querySelectorAll('[data-lock]').forEach(b => b.onclick = () => setLock(!st.lock, true));
+  try { setLock(localStorage.getItem('atlas-lock') === '1', false); } catch (e) { setLock(false, false); }
+  document.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { const k = +b.dataset.ct; st.ctOn[k] = !st.ctOn[k]; apply(); if (st.ct >= 0) renderCard(); });
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
 
   // ---------- theme (自動 / 淺色 / 深色)
@@ -596,16 +1280,28 @@ footer.credit a { color: inherit; }
   } catch (e) {}
 
   // ---------- loop
+  // 資訊卡打開時，把 3D 畫面的中心移到沒被卡片擋住的地方（手機往上、電腦往左）
+  let lastOff = '';
+  function viewShift() {
+    const w = canvas.clientWidth, h = canvas.clientHeight, card = $('#card');
+    if (!card || card.hidden || st.lock) return { x: 0, y: 0, vis: 1 };
+    if (innerWidth <= 820) { const ch = card.offsetHeight, top = 56; return { x: 0, y: (ch - top) / 2, vis: Math.max(0.35, (h - ch - top) / h) }; }
+    return { x: (card.offsetWidth + 12) / 2, y: 0, vis: 1 };
+  }
   function resize() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
-    if (canvas.width !== Math.round(w * renderer.getPixelRatio()) || canvas.height !== Math.round(h * renderer.getPixelRatio())) {
-      renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    const sh = viewShift(), key = [w, h, Math.round(sh.x), Math.round(sh.y)].join();
+    if (canvas.width !== Math.round(w * renderer.getPixelRatio()) || canvas.height !== Math.round(h * renderer.getPixelRatio()) || key !== lastOff) {
+      lastOff = key;
+      renderer.setSize(w, h, false); camera.aspect = w / h;
+      if (sh.x || sh.y) camera.setViewOffset(w, h, Math.round(sh.x), Math.round(sh.y), w, h); else camera.clearViewOffset();
+      camera.updateProjectionMatrix();
     }
   }
-  function loop(now) { resize(); if (anim) anim(now); controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
+  function loop(now) { resize(); if (anim) anim(now); tickAction(now); controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
   paint(); apply(); renderCard();
   { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist()); }
   requestAnimationFrame(loop);
-  window.__atlas = { MU, select, st };
+  window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved, setBulge, selectCT, CTM };
 })();
 </script>

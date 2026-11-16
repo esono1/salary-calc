@@ -5,6 +5,10 @@ import * as THREE from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
 import { manifest, decodeChunk, R } from './decode.mjs';
 import { ZH, REGIONS, REGION_ORDER } from './zh.mjs';
+import { buildSkeleton, muscleWeights, segmentOf, SEGMENTS } from './rig.mjs';
+import { buildAttachments } from './attach.mjs';
+import { functionOf } from './func.mjs';
+import { collectCT, relatedMuscles } from './ct.mjs';
 
 const QUALITY = process.env.Q || 'economy';
 const OUT = process.env.OUT || 'out';
@@ -27,6 +31,7 @@ async function loadSystem(sys, q) {
 await loadSystem('muscular', QUALITY);
 await loadSystem('skeletal', 'economy');
 await loadSystem('regions', 'economy');
+await loadSystem('insertions', 'economy');
 
 function weld(g, flagFn) {
   const map = new Map(), pos = [], flag = [], idx = new Uint32Array(g.idx.length);
@@ -65,7 +70,7 @@ for (const s of manifest.structures) {
   const path = [s.id, ...anc].join(' ');
   const region = (REGIONS.find(([re]) => re.test(path)) || [0, '其他'])[1];
   const tendonShare = g.flag.reduce((a, b) => a + b, 0) / g.flag.length;
-  M.push({ id: s.id, en: name.replace(/^\((.*)\)$/, '$1'), la: la[s.id]?.name || '', zh: zh || name, side: s.side === 'left' ? 'L' : s.side === 'right' ? 'R' : '', region, g, allTendon: tendonShare > 0.95 });
+  M.push({ meshId: s.meshes[0], id: s.id, en: name.replace(/^\((.*)\)$/, '$1'), la: la[s.id]?.name || '', zh: zh || name, side: s.side === 'left' ? 'L' : s.side === 'right' ? 'R' : '', region, g, allTendon: tendonShare > 0.95 });
 }
 // --- source fix: Z-Anatomy labels the upper and lower trapezius the other way round; swap by height
 for (const side of ['L', 'R']) {
@@ -98,11 +103,21 @@ for (const s of manifest.structures) {
       const kinds = {}; for (const m of g.mat) kinds[matKind[m]] = (kinds[matKind[m]] || 0) + 1;
       const top = Object.entries(kinds).sort((a, b) => b[1] - a[1])[0][0];
       if (top === 'skin') skinParts.push(g);
-    } else if (s.system === 'skeletal') boneParts.push(g);
+    } else if (s.system === 'skeletal') boneParts.push({ name: en[s.id]?.name || s.id, side: s.side, g: weld(g) });
   }
 }
 const skin = merge(skinParts);
-const bone = weld({ ...merge(boneParts), mat: [] });
+const RIG = buildSkeleton(boneParts);
+const bone = RIG.bone;
+console.log('pivots', JSON.stringify(RIG.skel.map(b => [b.name, b.pivot])));
+{
+  const t0 = Date.now();
+  M.forEach(m => { m.w = muscleWeights(m.g, RIG.segBVH); });
+  console.log('weights', ((Date.now() - t0) / 1000).toFixed(1) + 's');
+}
+const SEGI = new Map(SEGMENTS.map((x, i) => [x[0], i]));
+const ATT = buildAttachments({ manifest, en, meshes, M, boneStructs: boneParts, segIndexOf: (n, sd) => SEGI.get(segmentOf(n, sd)), weld });
+console.log('attachments', ATT.patches.length, 'tris', ATT.patches.reduce((a, p) => a + p.g.idx.length / 3, 0));
 console.log('skin tris', skin.idx.length / 3, 'bone tris', bone.idx.length / 3, 'bone verts', bone.pos.length / 3);
 
 function bvhOf(g) {
@@ -211,12 +226,17 @@ M.forEach((m, mi) => m.layer = layer[mi]);
 const hist = {}; M.forEach(m => hist[m.layer] = (hist[m.layer] || 0) + 1);
 console.log('layers', hist);
 
+// ---- fasciae, bursae, tendon sheaths
+const CT = collectCT({ manifest, en, meshes, ancestors, weld });
+CT.forEach(c => { c.w = muscleWeights(c.g, RIG.segBVH); c.rel = relatedMuscles(c.g, musB.bvh, vOwner, musIdx, M, c.side); });
+console.log('connective', CT.length, 'tris', CT.reduce((a, c) => a + c.g.idx.length / 3, 0));
+
 // ---- write binary
 const bb = new THREE.Box3();
 for (let i = 0; i < allM.pos.length; i += 3) bb.expandByPoint(p.fromArray(allM.pos, i));
 for (let i = 0; i < bone.pos.length; i += 3) bb.expandByPoint(p.fromArray(bone.pos, i));
 const min = bb.min.toArray(), size = bb.getSize(new THREE.Vector3()).toArray();
-const q = (pos) => { const o = new Uint16Array(pos.length); for (let i = 0; i < pos.length; i++) o[i] = Math.round((pos[i] - min[i % 3]) / size[i % 3] * 65535); return o; };
+const q = (pos) => { const o = new Uint16Array(pos.length); for (let i = 0; i < pos.length; i++) o[i] = Math.max(0, Math.min(65535, Math.round((pos[i] - min[i % 3]) / size[i % 3] * 65535))); return o; };
 const chunks = []; let off = 0;
 const push = (ta) => { const buf = Buffer.from(ta.buffer, ta.byteOffset, ta.byteLength); const o = off; chunks.push(buf); off += buf.length; if (off % 4) { const pad = 4 - off % 4; chunks.push(Buffer.alloc(pad)); off += pad; } return o; };
 const meta = {
@@ -224,17 +244,60 @@ const meta = {
   attribution: 'Z-Anatomy (CC BY-SA 4.0), based on BodyParts3D © DBCLS; glTF conversion by Svitylo 3D Anatomy Atlas data 1.2.0',
   muscles: M.map(m => ({
     id: m.id.replace('muscular.', ''), zh: m.zh, en: m.en, la: m.la, side: m.side, region: REGION_ORDER.indexOf(m.region), layer: m.layer,
-    exposed: Math.round(m.exposed * 100), o: m.out, fx: m.fixed || 0, sheath: IGN.has(M.indexOf(m)) ? 1 : 0, tendon: m.allTendon ? 1 : 0,
+    exposed: Math.round(m.exposed * 100), a: functionOf(m.en)?.acts || [], org: ATT.summary[M.indexOf(m)].o, ins: ATT.summary[M.indexOf(m)].n, fn: functionOf(m.en)?.text || '', o: m.out, fx: m.fixed || 0, sheath: IGN.has(M.indexOf(m)) ? 1 : 0, tendon: m.allTendon ? 1 : 0,
     cb: m.coveredBy.map(x => [x[0], Math.round(x[1] * 100), Math.round(x[2] * 100)]),
     nv: m.g.pos.length / 3, ni: m.g.idx.length,
-    p: push(q(m.g.pos)), i: push(Uint16Array.from(m.g.idx)), f: push(m.g.flag),
+    p: push(q(m.g.pos)), i: push(Uint16Array.from(m.g.idx)), f: push(m.g.flag), w: push(m.w),
   })),
 };
-meta.bone = { nv: bone.pos.length / 3, ni: bone.idx.length, p: push(q(bone.pos)), i: push(bone.idx) };
+meta.bone = { nv: bone.pos.length / 3, ni: bone.idx.length, p: push(q(bone.pos)), i: push(bone.idx), s: push(bone.seg) };
+meta.skel = RIG.skel;
+meta.att = ATT.patches.map(pt => ({ m: pt.mus, t: pt.type, s: pt.seg, nv: pt.g.pos.length / 3, ni: pt.g.idx.length, p: push(q(pt.g.pos)), i: push(Uint16Array.from(pt.g.idx)) }));
+meta.ct = CT.map(c => ({ zh: c.zh, en: c.en, k: c.kind, side: c.side, info: c.info, rel: c.rel, nv: c.g.pos.length / 3, ni: c.g.idx.length, u32: c.g.pos.length / 3 > 65535 ? 1 : 0, p: push(q(c.g.pos)), i: push(c.g.pos.length / 3 > 65535 ? Uint32Array.from(c.g.idx) : Uint16Array.from(c.g.idx)), w: push(c.w) }));
 const bin = Buffer.concat(chunks);
 fs.writeFileSync(OUT + '/body.bin', zlib.gzipSync(bin, { level: 9 }));
 fs.writeFileSync(OUT + '/meta.json', JSON.stringify(meta));
 console.log('bin', bin.length, 'gz', fs.statSync(OUT + '/body.bin').size, 'meta', fs.statSync(OUT + '/meta.json').size);
+
+// ---- optional high-detail muscles (hd.bin): source "standard" meshes simplified to HD_RATIO, same order as meta.muscles
+if (process.env.HD) {
+  const { MeshoptSimplifier } = await import('meshoptimizer');
+  await MeshoptSimplifier.ready;
+  const RATIO = +(process.env.HD_RATIO || 0.5);
+  const hdMeshes = new Map();
+  for (const ch of manifest.chunks.filter(c => c.system === 'muscular')) for (const [k, v] of await decodeChunk(ch, 'standard')) hdMeshes.set(k, v);
+  const hc = []; let ho = 0;
+  const hpush = (ta) => { const buf = Buffer.from(ta.buffer, ta.byteOffset, ta.byteLength); const o = ho; hc.push(buf); ho += buf.length; if (ho % 4) { const pad = 4 - ho % 4; hc.push(Buffer.alloc(pad)); ho += pad; } return o; };
+  const list = [];
+  let tris = 0, verts = 0;
+  const t0 = Date.now();
+  for (const m of M) {
+    const raw = hdMeshes.get(m.meshId);
+    let g = raw ? weld(raw, isTendon) : m.g;
+    if (raw && g.idx.length / 3 > 400) {
+      const target = Math.max(300, Math.floor(g.idx.length / 3 * RATIO)) * 3;
+      const [ix] = MeshoptSimplifier.simplify(g.idx, g.pos, 3, target, 0.002, []);
+      const remap = new Int32Array(g.pos.length / 3).fill(-1), pos = [], flag = [];
+      const idx = new Uint32Array(ix.length);
+      for (let k = 0; k < ix.length; k++) {
+        const v = ix[k];
+        if (remap[v] < 0) { remap[v] = pos.length / 3; pos.push(g.pos[v * 3], g.pos[v * 3 + 1], g.pos[v * 3 + 2]); flag.push(g.flag[v]); }
+        idx[k] = remap[v];
+      }
+      g = { pos: new Float32Array(pos), idx, flag: new Uint8Array(flag) };
+    }
+    const nv = g.pos.length / 3, wide = nv > 65535;
+    const w = muscleWeights(g, RIG.segBVH);
+    list.push({ nv, ni: g.idx.length, u32: wide ? 1 : 0, p: hpush(q(g.pos)), i: hpush(wide ? Uint32Array.from(g.idx) : Uint16Array.from(g.idx)), f: hpush(g.flag), w: hpush(w) });
+    tris += g.idx.length / 3; verts += nv;
+  }
+  const head = Buffer.from(JSON.stringify(list));
+  const lenBuf = Buffer.alloc(4); lenBuf.writeUInt32LE(head.length);
+  const pad = Buffer.alloc((4 - (head.length + 4) % 4) % 4, 0x20);
+  const hdBin = Buffer.concat([lenBuf, head, pad, ...hc]);
+  fs.writeFileSync(OUT + '/hd.bin', zlib.gzipSync(hdBin, { level: 9 }));
+  console.log('hd tris', tris, 'verts', verts, 'raw', hdBin.length, 'gz', fs.statSync(OUT + '/hd.bin').size, ((Date.now() - t0) / 1000).toFixed(0) + 's');
+}
 
 // ---- sanity report
 const find = (z, side = 'R') => M.findIndex(m => m.zh.startsWith(z) && m.side === side);
