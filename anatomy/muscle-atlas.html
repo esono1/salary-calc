@@ -260,7 +260,7 @@ footer.credit a { color: inherit; }
         <button class="btn on" data-color="layer">層次</button><button class="btn" data-color="natural">肌肉色</button>
       </div>
       <div class="grp" role="group" aria-label="顯示">
-        <button class="btn" id="bones">骨骼</button>
+        <button class="btn" id="bones">骨骼</button><button class="btn" id="bonesOnly">只看骨骼</button>
         <button class="btn" data-side="R">右半</button><button class="btn" data-side="L">左半</button><button class="btn on" data-side="">雙側</button>
       </div>
       <div class="grp"><span class="lab">分離</span><input id="explode" type="range" min="0" max="100" value="0" aria-label="分離程度"></div>
@@ -282,7 +282,7 @@ footer.credit a { color: inherit; }
       </div>
       <div class="grp ver" role="group" aria-label="版本">
         <span class="lab">版本</span>
-        <span class="vtxt" id="verTxt">網頁 2026.11.16-1746</span>
+        <span class="vtxt" id="verTxt">網頁 2026.11.16-1747</span>
         <button class="btn" id="verCheck">檢查更新</button>
       </div>
       <div class="grp" role="group" aria-label="工具">
@@ -567,7 +567,9 @@ footer.credit a { color: inherit; }
       // 選骨頭時肌肉變半透明，才看得到標亮的骨頭
       meshes.forEach(mesh => { if (!mesh.visible) return; const mat = mesh.material; mat.transparent = true; mat.opacity = 0.14; mat.depthWrite = false; mesh.renderOrder = 2; });
     }
+    if (st.bonesOnly) { boneMesh.visible = true; meshes.forEach((mesh, i) => { if (i !== st.sel) mesh.visible = false; }); }
     $('#bones').classList.toggle('on', boneMesh.visible);
+    $('#bonesOnly').classList.toggle('on', !!st.bonesOnly);
     // 播放動作時：被拉長的肌肉（拮抗肌）標成紫色
     const str = play.key ? stretched(play.key, play.side) : null;
     if (str) MU.forEach((m, i) => {
@@ -1062,7 +1064,9 @@ footer.credit a { color: inherit; }
   document.querySelectorAll('[data-side]').forEach(b => b.onclick = () => {
     st.side = b.dataset.side; document.querySelectorAll('[data-side]').forEach(x => x.classList.toggle('on', x === b)); apply();
   });
-  $('#bones').onclick = e => { boneMesh.visible = !boneMesh.visible; e.currentTarget.classList.toggle('on', boneMesh.visible); };
+  $('#bones').onclick = e => { boneMesh.visible = !boneMesh.visible; if (!boneMesh.visible) st.bonesOnly = false; apply(); };
+  // 只看骨骼：隱藏所有肌肉，直接看（和點選）骨頭
+  $('#bonesOnly').onclick = () => { st.bonesOnly = !st.bonesOnly; if (st.bonesOnly) boneMesh.visible = true; apply(); };
   $('#explode').oninput = e => { st.explode = e.target.value / 100; apply(); };
 
   // ---------- picking
@@ -1677,7 +1681,7 @@ footer.credit a { color: inherit; }
   } catch (e) {}
 
   // ---------- 版本與更新：顯示目前版本，打開或切回 App 時檢查網站上有沒有新版
-  const PAGE_VERSION = '2026.11.16-1746';
+  const PAGE_VERSION = '2026.11.16-1747';
   let appVer = '';
   try { if (window.AndroidBridge && typeof AndroidBridge.appVersion === 'function') appVer = String(AndroidBridge.appVersion()); } catch (e) {}
   $('#verTxt').textContent = '網頁 ' + PAGE_VERSION + (appVer ? '　App ' + appVer : '') + (location.protocol === 'file:' ? '（離線備份）' : '');
