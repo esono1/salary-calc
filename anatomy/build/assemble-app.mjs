@@ -1,5 +1,7 @@
 // Offline / installable build: three.js inlined, no web fonts, PWA hooks.
 import fs from 'node:fs';
+// 版本號：台灣時間 年.月.日-時分
+const VERSION = process.env.VERSION || new Date(Date.now() + 8 * 3600e3).toISOString().replace(/^(\d+)-(\d+)-(\d+)T(\d+):(\d+).*/, '$1.$2.$3-$4$5');
 const OUT = process.argv[2] || 'app';
 fs.mkdirSync(OUT, { recursive: true });
 let t = fs.readFileSync('template.html', 'utf8');
@@ -26,7 +28,7 @@ rep('<title>', `<!doctype html>
 rep('<div class="app">', '</head>\n<body>\n<div class="app">');
 const meta = fs.readFileSync('out/meta.json', 'utf8').replace(/</g, '\\u003c');
 const geo = fs.readFileSync('out/body.bin').toString('base64');
-t = t.replace('__HDURL__', 'hd.bin').replace('__META__', () => meta).replace('__GEO__', () => geo);
+t = t.replaceAll('__VERSION__', VERSION).replace('__HDURL__', 'hd.bin').replace('__META__', () => meta).replace('__GEO__', () => geo);
 t += `
 <script>
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -35,4 +37,5 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) naviga
 </html>
 `;
 fs.writeFileSync(OUT + '/index.html', t);
-console.log('index.html', fs.statSync(OUT + '/index.html').size);
+fs.writeFileSync(OUT + '/version.json', JSON.stringify({ v: VERSION }) + '\n');
+console.log('index.html', fs.statSync(OUT + '/index.html').size, 'version', VERSION);
