@@ -49,6 +49,11 @@ const GEO_CHUNKS = (() => {
   window.__dataReady = (async function () {
     await load(${JSON.stringify(metaFile)});
     for (var k = 0; k < files.length; k += 4) await Promise.all(files.slice(k, k + 4).map(load));
+    // 刪掉快取裡舊版本的模型資料，避免手機空間越用越多
+    try {
+      var keep = files.concat([${JSON.stringify(metaFile)}]);
+      caches.keys().then(function (ks) { ks.forEach(function (n) { caches.open(n).then(function (c) { c.keys().then(function (rs) { rs.forEach(function (r) { var m = /\/(d\/[^\/?]+\.js)/.exec(r.url); if (m && keep.indexOf(m[1]) < 0) c.delete(r); }); }); }); }); });
+    } catch (e) {}
   })();
 })();
 </script>`;
