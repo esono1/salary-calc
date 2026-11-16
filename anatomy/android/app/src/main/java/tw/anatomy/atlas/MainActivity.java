@@ -3,11 +3,16 @@ package tw.anatomy.atlas;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Color;
 import android.graphics.Insets;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -15,6 +20,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 
 /**
  * 肌肉圖譜 App。
@@ -28,12 +34,42 @@ public class MainActivity extends Activity {
     private static final String BUILT_IN = "file:///android_asset/index.html";
 
     private WebView web;
+    private FrameLayout frame;
     private boolean usingBuiltIn = false;
 
-    /** 給網頁讀 App 版本，用來判斷要不要提醒重新安裝 */
-    public static class Bridge {
+    /** 網頁和 App 溝通用 */
+    public class Bridge {
+        /** App 版本，網頁用來判斷要不要提醒重新安裝 */
         @JavascriptInterface
         public String appVersion() { return BuildConfig.VERSION_NAME; }
+
+        /** 網頁切換深淺色時，讓狀態列、導覽列跟著換底色和圖示顏色 */
+        @JavascriptInterface
+        public void setBarColors(String hex, boolean dark) {
+            runOnUiThread(() -> applyBarColors(hex, dark));
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void applyBarColors(String hex, boolean dark) {
+        int c;
+        try { c = Color.parseColor(hex); } catch (Exception e) { return; }
+        frame.setBackgroundColor(c);
+        Window w = getWindow();
+        w.setStatusBarColor(c);
+        w.setNavigationBarColor(c);
+        if (Build.VERSION.SDK_INT >= 30) {
+            WindowInsetsController ic = w.getInsetsController();
+            if (ic != null) {
+                int mask = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                ic.setSystemBarsAppearance(dark ? 0 : mask, mask);
+            }
+        } else {
+            View d = w.getDecorView();
+            int f = d.getSystemUiVisibility();
+            int light = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | (Build.VERSION.SDK_INT >= 26 ? View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : 0);
+            d.setSystemUiVisibility(dark ? (f & ~light) : (f | light));
+        }
     }
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
@@ -71,8 +107,12 @@ public class MainActivity extends Activity {
             }
         });
 
-        // Android 15 起畫面會延伸到狀態列底下，這裡把內容往內縮，避免被狀態列和導覽列蓋住
-        web.setOnApplyWindowInsetsListener((v, insets) -> {
+        // Android 15 起畫面會延伸到狀態列底下。WebView 本身不理會內縮，
+        // 所以外面包一層容器，由容器往內縮，避免狀態列和導覽列蓋住按鈕
+        frame = new FrameLayout(this);
+        frame.setBackgroundColor(Color.parseColor("#120f15"));
+        frame.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        frame.setOnApplyWindowInsetsListener((v, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 Insets b = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
                 v.setPadding(b.left, b.top, b.right, b.bottom);
@@ -80,10 +120,11 @@ public class MainActivity extends Activity {
                 v.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
                         insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
             }
-            return insets;
+            // 已經由容器處理，不再交給 WebView，避免內縮兩次
+            return Build.VERSION.SDK_INT >= 30 ? WindowInsets.CONSUMED : insets.consumeSystemWindowInsets();
         });
 
-        setContentView(web);
+        setContentView(frame);
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl(ONLINE);
     }
