@@ -335,7 +335,7 @@ footer.credit a { color: inherit; }
       <h5 class="sec-h" data-sec="settings">關於</h5>
       <div class="grp ver" role="group" aria-label="版本" data-sec="settings">
         <span class="lab">版本</span>
-        <span class="vtxt" id="verTxt">網頁 2026.11.16-1815</span>
+        <span class="vtxt" id="verTxt">網頁 2026.11.16-1828</span>
         <span class="vbtns"><button class="btn" id="verCheck">檢查更新</button><button class="btn" id="apkBtn" hidden>更新 App</button></span>
       </div>
       <p class="about" data-sec="settings">模型：Z-Anatomy（CC BY-SA 4.0），源自 BodyParts3D © DBCLS。僅供學習與繪畫參考，非醫療用途。</p>
@@ -2870,7 +2870,7 @@ footer.credit a { color: inherit; }
   applyTheme(themePref, false);
 
   // ---------- Android App：App 外殼太舊時提醒重新安裝（網頁內容本身會自動更新）
-  const LATEST_APK = '1.5';
+  const LATEST_APK = '1.6';
   const APK_URL = 'https://esono1.github.io/salary-calc/anatomy/muscle-atlas.apk';
   const verLess = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
   try {
@@ -2907,7 +2907,7 @@ footer.credit a { color: inherit; }
   };
 
   // ---------- 版本與更新：顯示目前版本，打開或切回 App 時檢查網站上有沒有新版
-  const PAGE_VERSION = '2026.11.16-1815';
+  const PAGE_VERSION = '2026.11.16-1828';
   let appVer = '';
   try { if (window.AndroidBridge && typeof AndroidBridge.appVersion === 'function') appVer = String(AndroidBridge.appVersion()); } catch (e) {}
   const OFFLINE = location.protocol === 'file:';
