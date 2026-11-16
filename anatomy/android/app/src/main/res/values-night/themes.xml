@@ -1,0 +1,8 @@
+<resources>
+    <!-- 手機開深色模式時，App 外框跟著變深；網頁的「自動」主題也會跟著變暗 -->
+    <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor">#17131a</item>
+        <item name="android:navigationBarColor">#17131a</item>
+    </style>
+</resources>

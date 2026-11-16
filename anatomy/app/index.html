@@ -85,6 +85,7 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 .chip.off i { background: transparent !important; box-shadow: inset 0 0 0 2px var(--muted); }
 .legend .peel { display: flex; gap: 6px; margin-top: 8px; }
 .legend .peel .btn { border: 1px solid var(--line); background: var(--bg); font-size: 12px; padding: 5px 10px; }
+.mobile-only { display: none; }
 .removed { margin-top: 8px; font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 
 .card { position: absolute; right: 12px; top: 64px; bottom: 12px; width: 330px; max-width: calc(100% - 24px); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; }
@@ -117,17 +118,57 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 footer.credit { font-size: 10.5px; color: var(--muted); padding: 8px 16px 12px max(16px, env(safe-area-inset-left, 0px)); border-top: 1px solid var(--line); line-height: 1.5; }
 footer.credit a { color: inherit; }
 
+.mbar, .sheet-x, .scrim { display: none; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 7px 11px; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; font-size: 13px; }
+.icon-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
 @media (max-width: 820px) {
-  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 62vh auto; height: auto; }
-  main.stage { grid-row: 1; height: 62vh; }
-  aside.index { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); max-height: none; }
-  .list { overflow: visible; }
-  .card, .hint { position: fixed; top: auto; left: 0; right: 0; bottom: 0; width: auto; max-width: none; max-height: 52vh; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); z-index: 20; }
+  .app { display: block; height: 100%; }
+  main.stage { position: fixed; inset: 0; }
+  .mbar { display: flex; position: absolute; z-index: 5; top: calc(8px + env(safe-area-inset-top, 0px)); left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); gap: 6px; align-items: center; }
+  .mbar .ttl { flex: 1; min-width: 0; font-family: var(--font-head); font-size: 16px; font-weight: 700; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 6px var(--stage); }
+  .scrim:not([hidden]) { display: block; position: fixed; inset: 0; background: rgba(20, 10, 15, .35); z-index: 25; }
+
+  /* sheets */
+  .toolbar, aside.index { display: none; }
+  .toolbar.open, aside.index.open { display: flex; position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 30; background: var(--panel); border-radius: 16px 16px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.25); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .toolbar.open { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); pointer-events: auto; }
+  .toolbar.open .grp { box-shadow: none; justify-content: space-between; flex-wrap: wrap; }
+  .toolbar.open .grp .lab { display: inline; min-width: 3em; }
+  .toolbar.open input[type=range] { flex: 1; width: auto; }
+  aside.index.open { height: 82dvh; flex-direction: column; border-right: 0; }
+  .sheet-x { display: inline-flex; float: right; }
+  .toolbar.open .mobile-only { display: flex; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 15px; }
+  .brand { padding-top: 14px; }
+  .brand p { display: none; }
+  footer.credit { display: none; }
+
+  /* compact layer bar */
+  .legend { left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); max-width: none; padding: 8px; display: flex; align-items: center; gap: 6px; }
+  .legend .t { display: none; }
+  .legend .chips { flex-wrap: nowrap; gap: 4px; overflow-x: auto; flex: 1; min-width: 0; }
+  .chip { padding: 0; width: 30px; height: 30px; justify-content: center; flex: none; font-size: 0; position: relative; }
+  .chip i { width: 22px; height: 22px; }
+  .chip::after { content: attr(data-l); position: absolute; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,.6); }
+  .chip.off::after { color: var(--muted); text-shadow: none; }
+  .legend .peel { margin: 0; gap: 4px; flex: none; }
+  .legend .peel .btn { padding: 6px 8px; }
+  .legend .peel .long { display: none; }
+  .removed { display: none !important; }
+  body.card-open .legend { display: none; }
+
+  .card { position: fixed; top: auto; left: 0; right: 0; bottom: 0; width: auto; max-width: none; max-height: 48dvh; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 20; }
+  .card .hd { padding: 12px 16px 10px; }
+  .card h2 { font-size: 19px; }
+  .card .sub { font-size: 11px; }
+  .card .stats { margin-top: 8px; }
+  .card .stats div { padding: 6px 8px; }
+  .card .stats b { font-size: 14px; }
+  .card .acts { margin-top: 8px; }
   .hint { display: none; }
-  .legend { bottom: 8px; left: 8px; padding: 8px 10px; }
-  .toolbar { top: 8px; left: 8px; right: 8px; gap: 6px; }
-  .grp .lab { display: none; }
-  .btn { padding: 5px 8px; }
+  .loading { padding: 0 24px; text-align: center; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -135,8 +176,9 @@ footer.credit a { color: inherit; }
 </head>
 <body>
 <div class="app">
-  <aside class="index">
+  <aside class="index" id="index">
     <div class="brand">
+      <button class="btn sheet-x" data-close aria-label="關閉">✕</button>
       <h1>全身肌肉分層圖譜</h1>
       <p><span id="count">—</span> 塊肌肉，依「由淺到深」自動分層。點選肌肉看它被誰覆蓋、又覆蓋了誰。</p>
     </div>
@@ -146,8 +188,15 @@ footer.credit a { color: inherit; }
   </aside>
   <main class="stage">
     <canvas id="gl"></canvas>
+    <div class="mbar">
+      <button class="icon-btn" id="mList" aria-label="肌肉清單"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>清單</button>
+      <div class="ttl">全身肌肉分層圖譜</div>
+      <button class="icon-btn" id="mTheme" aria-label="切換主題"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      <button class="icon-btn" id="mOpts" aria-label="顯示設定"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>顯示</button>
+    </div>
     <div class="loading" id="loading">正在載入模型…</div>
-    <div class="toolbar">
+    <div class="toolbar" id="toolbar">
+      <div class="sheet-head mobile-only"><span>顯示設定</span><button class="btn sheet-x" data-close aria-label="關閉">✕</button></div>
       <div class="grp" role="group" aria-label="視角">
         <span class="lab">視角</span>
         <button class="btn" data-view="front">前</button><button class="btn" data-view="back">後</button><button class="btn" data-view="left">左</button><button class="btn" data-view="right">右</button>
@@ -161,14 +210,18 @@ footer.credit a { color: inherit; }
         <button class="btn" data-side="R">右半</button><button class="btn" data-side="L">左半</button><button class="btn on" data-side="">雙側</button>
       </div>
       <div class="grp"><span class="lab">分離</span><input id="explode" type="range" min="0" max="100" value="0" aria-label="分離程度"></div>
+      <div class="grp" role="group" aria-label="主題">
+        <span class="lab">主題</span>
+        <button class="btn" data-theme-set="auto">自動</button><button class="btn" data-theme-set="light">淺色</button><button class="btn" data-theme-set="dark">深色</button>
+      </div>
     </div>
     <div class="legend">
       <div class="t"><span>層次（點選開關）</span><span>1 = 最淺</span></div>
       <div class="chips" id="chips"></div>
       <div class="peel">
-        <button class="btn" id="peel">剝掉最外一層</button>
-        <button class="btn" id="unpeel">放回一層</button>
-        <button class="btn" id="reset">全部復原</button>
+        <button class="btn" id="peel">剝<span class="long">掉最外</span>一層</button>
+        <button class="btn" id="unpeel">放回<span class="long">一層</span></button>
+        <button class="btn" id="reset"><span class="long">全部</span>復原</button>
       </div>
       <div class="removed" id="removed" hidden></div>
     </div>
@@ -184,6 +237,7 @@ footer.credit a { color: inherit; }
     </div>
     <div class="card" id="card" hidden></div>
   </main>
+  <div class="scrim" id="scrim" hidden></div>
 </div>
 
 <script>/**
@@ -1416,6 +1470,7 @@ footer.credit a { color: inherit; }
       const b = document.createElement('button');
       b.className = 'chip' + (st.layersOff.has(l) ? ' off' : '');
       b.innerHTML = `<i style="background:${layerHex(l)}"></i>第 ${l} 層 · ${counts[l]}`;
+      b.dataset.l = l; b.title = `第 ${l} 層（${counts[l]} 塊）`;
       b.setAttribute('aria-pressed', !st.layersOff.has(l));
       b.onclick = () => { st.layersOff.has(l) ? st.layersOff.delete(l) : st.layersOff.add(l); apply(); };
       $('#chips').appendChild(b);
@@ -1455,7 +1510,7 @@ footer.credit a { color: inherit; }
         const b = document.createElement('button');
         b.className = 'row' + (ix.includes(st.sel) ? ' on' : '') + (ix.every(i => st.removed.has(i)) ? ' gone' : '');
         b.innerHTML = `<span class="dot" style="background:${layerHex(m.layer)}"></span><span class="nm"><b>${m.zh}</b><small>${m.en}</small></span><span class="lv">L${m.layer}</span>`;
-        b.onclick = () => select(ix.includes(st.sel) && ix.length > 1 ? ix.find(i => i !== st.sel) : pick, true);
+        b.onclick = () => { closeSheets(); select(ix.includes(st.sel) && ix.length > 1 ? ix.find(i => i !== st.sel) : pick, true); };
         frag.appendChild(b);
       });
     });
@@ -1476,6 +1531,7 @@ footer.credit a { color: inherit; }
   }
   function renderCard() {
     const card = $('#card');
+    document.body.classList.toggle('card-open', st.sel >= 0);
     if (st.sel < 0) { card.hidden = true; $('#hint').hidden = false; return; }
     $('#hint').hidden = true; card.hidden = false;
     const m = MU[st.sel];
@@ -1545,10 +1601,17 @@ footer.credit a { color: inherit; }
     tween(c.clone().addScaledVector(dir, Math.min(3.2, r * 5 + 0.35)), c);
   }
   const VIEWS = { front: [0, 0, 1], back: [0, 0, -1], left: [1, 0, 0], right: [-1, 0, 0] };
+  const fitDist = () => {
+    resize();
+    const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const narrow = innerWidth <= 820;
+    const h = narrow ? 2.05 : 1.95, w = 0.95;
+    return Math.max((h / 2) / t, (w / 2) / (t * camera.aspect)) + 0.25;
+  };
+  const viewTarget = () => new THREE.Vector3(0, innerWidth <= 820 ? 0.86 : 0.9, 0);
   document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => {
-    const t = new THREE.Vector3(0, 0.9, 0); tween(t.clone().addScaledVector(new THREE.Vector3(...VIEWS[b.dataset.view]), 3.6), t);
+    const t = viewTarget(); tween(t.clone().addScaledVector(new THREE.Vector3(...VIEWS[b.dataset.view]), fitDist()), t);
   });
-  camera.position.set(0, 0.9, 3.6); controls.target.set(0, 0.9, 0);
 
   // ---------- toolbar
   document.querySelectorAll('[data-color]').forEach(b => b.onclick = () => {
@@ -1585,6 +1648,38 @@ footer.credit a { color: inherit; }
     if ((e.key === 'Delete' || e.key === 'Backspace') && st.sel >= 0) removeMuscle(st.sel);
   });
 
+  // ---------- mobile sheets
+  function closeSheets() { $('#toolbar').classList.remove('open'); $('#index').classList.remove('open'); $('#scrim').hidden = true; }
+  function openSheet(el) { closeSheets(); el.classList.add('open'); $('#scrim').hidden = false; }
+  $('#mList').onclick = () => { openSheet($('#index')); renderList(); };
+  $('#mOpts').onclick = () => openSheet($('#toolbar'));
+  $('#scrim').onclick = closeSheets;
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
+
+  // ---------- theme (自動 / 淺色 / 深色)
+  const root = document.documentElement;
+  const hostTheme = root.getAttribute('data-theme');
+  let themePref = 'auto';
+  try { themePref = localStorage.getItem('atlas-theme') || 'auto'; } catch (e) {}
+  function applyTheme(pref, save) {
+    themePref = pref;
+    if (pref === 'auto') { if (hostTheme) root.setAttribute('data-theme', hostTheme); else root.removeAttribute('data-theme'); }
+    else root.setAttribute('data-theme', pref);
+    if (save) try { localStorage.setItem('atlas-theme', pref); } catch (e) {}
+    document.querySelectorAll('[data-theme-set]').forEach(b => b.classList.toggle('on', b.dataset.themeSet === pref));
+    const cs = getComputedStyle(root);
+    boneMesh.material.color.set(cs.getPropertyValue('--bone').trim());
+    const lbl = { auto: '自動', light: '淺色', dark: '深色' }[pref];
+    $('#mTheme').setAttribute('aria-label', '主題：' + lbl);
+    $('#mTheme').title = '主題：' + lbl;
+  }
+  document.querySelectorAll('[data-theme-set]').forEach(b => b.onclick = () => applyTheme(b.dataset.themeSet, true));
+  $('#mTheme').onclick = () => {
+    const dark = getComputedStyle(root).getPropertyValue('--bg').trim().toLowerCase() === '#17131a';
+    applyTheme(dark ? 'light' : 'dark', true);
+  };
+  applyTheme(themePref, false);
+
   // ---------- loop
   function resize() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -1594,6 +1689,7 @@ footer.credit a { color: inherit; }
   }
   function loop(now) { resize(); if (anim) anim(now); controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
   paint(); apply(); renderCard();
+  { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist()); }
   requestAnimationFrame(loop);
   window.__atlas = { MU, select, st };
 })();
