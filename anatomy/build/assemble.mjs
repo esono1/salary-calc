@@ -9,7 +9,7 @@ const GEO_CHUNKS = (() => {
   // 下載進度：資料切成小段，每段到達時更新「正在下載模型… xx%」
   out.push(`<script>window.__parts=[];window.__ld=function(i,n,s){__parts[i]=s;var p=Math.round((i+1)/n*100),t=document.getElementById('ldTxt'),b=document.getElementById('ldBar');if(t)t.textContent='正在下載模型… '+p+'%';if(b)b.style.width=p+'%';};</script>`);
   for (let i = 0; i < n; i++) out.push(`<script>__ld(${i},${n},"${b64.slice(i * size, (i + 1) * size)}")</script>`);
-  return out.join('\n');
+  return `<script>window.__META=${fs.readFileSync('out/meta.json', 'utf8').replace(/</g, '\\u003c')};</script>\n` + out.join('\n');
 })();
-fs.writeFileSync(process.env.OUTFILE || 'out/muscle-atlas.html', t.replaceAll('__VERSION__', VERSION).replace('__HDURL__', process.env.HDURL || 'app/hd.bin').replace('__META__', () => meta).replace('__GEO__', () => GEO_CHUNKS));
+fs.writeFileSync(process.env.OUTFILE || 'out/muscle-atlas.html', t.replaceAll('__VERSION__', VERSION).replace('__HDURL__', process.env.HDURL || 'app/hd.bin').replace('__DATA__', () => GEO_CHUNKS));
 console.log(fs.statSync('out/muscle-atlas.html').size);
