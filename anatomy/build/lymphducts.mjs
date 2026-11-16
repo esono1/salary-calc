@@ -69,5 +69,32 @@ export function lymphDucts(boneParts, vessels) {
   const rStart = P(angleR.x * 0.75, angleR.y - 0.012, angleR.z - 0.004);
   out.push({ en: 'Right lymphatic duct', zh: '右淋巴管（示意）', g: tube([rStart, P((rStart.x + angleR.x) / 2, angleR.y - 0.004, angleR.z), angleR], 0.0018, 24, 8),
     info: '右淋巴管：約 1 到 2 公分的短管，收集右側頭頸、右上肢和右胸的淋巴，注入右側頸內靜脈和鎖骨下靜脈交會處（右靜脈角）。（示意圖）' });
+  // ---- leg lymphatic pathways (schematic), following the model's own veins
+  const centerline = (verts, bin = 0.02) => {
+    const bins = new Map();
+    for (const v of verts) { const k = Math.round(v.y / bin); if (!bins.has(k)) bins.set(k, []); bins.get(k).push(v); }
+    return [...bins.entries()].filter(([, l]) => l.length >= 6).sort((x, y) => x[0] - y[0])
+      .map(([, l]) => l.reduce((a, v) => a.add(v), P(0, 0, 0)).multiplyScalar(1 / l.length));
+  };
+  const thin = (list, every) => list.filter((_, i) => i % every === 0 || i === list.length - 1);
+  for (const [S, word] of [['L', '左'], ['R', '右']]) {
+    // superficial: along the great saphenous vein (foot / medial leg -> superficial inguinal nodes)
+    const gsv = centerline(vessel(/^Great saphenous vein$/, S));
+    if (gsv.length > 4) {
+      const path = thin(gsv, 2).map(p => P(p.x + (S === 'L' ? 0.003 : -0.003), p.y, p.z + 0.004));
+      out.push({ en: 'Superficial lymphatic vessels of lower limb', zh: `下肢淺層淋巴管（${word}，示意）`, side: S, g: tube(path, 0.0014, 160, 8),
+        info: '下肢淺層淋巴管：從足背、足內側沿著小腿和大腿內側（與大隱靜脈伴行）往上，匯入大腿根部的腹股溝淺淋巴結。下肢水腫、淋巴水腫和這條路線有關。（原始模型沒有淋巴管，這是依教科書、沿模型的大隱靜脈畫的示意圖。）' });
+    }
+    // deep: popliteal -> femoral -> external iliac -> common iliac veins, then the lumbar trunk up to the cisterna chyli
+    const deep = centerline([...vessel(/^Popliteal vein$/, S), ...vessel(/^Femoral vein$/, S), ...vessel(/^External iliac vein$/, S), ...vessel(/^Common iliac vein$/, S)], 0.025);
+    if (deep.length > 4) {
+      const path = thin(deep, 2).map(p => P(p.x + (S === 'L' ? 0.005 : -0.005), p.y, p.z + 0.006));
+      const top = path[path.length - 1];
+      const L4 = front('L4'), L3 = front('L3');
+      path.push(P((top.x + (S === 'L' ? 0.012 : -0.012)) / 2, L4.y, L4.z + 0.01), P(S === 'L' ? 0.006 : -0.012, L3.y, L3.z + 0.009), P(cc.x + (S === 'L' ? 0.004 : -0.004), cc.y - 0.02, cc.z));
+      out.push({ en: 'Deep lymphatic vessels of lower limb and lumbar trunk', zh: `下肢深層淋巴管與腰幹（${word}，示意）`, side: S, g: tube(path, 0.0016, 180, 8),
+        info: '下肢深層淋巴管：與膕靜脈、股靜脈伴行往上，經膕淋巴結到腹股溝深淋巴結，再沿髂外、髂總血管進入骨盆，成為腰淋巴幹，最後注入乳糜池。淺層淋巴（腹股溝淺淋巴結）也會匯入這條路線。（示意圖）' });
+    }
+  }
   return out;
 }

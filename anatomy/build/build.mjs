@@ -284,7 +284,7 @@ const SYS = [];
     SYS.push({ en: name, zh: organZh(name, s.system) || name, k, side, info: organInfo(name, k, path), g: weld(raw) });
   }
   // schematic lymphatic ducts (not in the source model)
-  for (const d of lymphDucts(boneParts, SYS.filter(x => x.k === 'v'))) SYS.push({ en: d.en, zh: d.zh, k: 'l', side: '', info: d.info, g: d.g, schematic: true });
+  for (const d of lymphDucts(boneParts, SYS.filter(x => x.k === 'v'))) SYS.push({ en: d.en, zh: d.zh, k: 'l', side: d.side || '', info: d.info, g: d.g, schematic: true });
   for (const [grp, list] of cns) {
     let g = mergeGeoms(list);
     if (grp !== 'Spinal cord') g = simplify(g, grp === 'Cerebrum' ? 0.3 : 0.5);

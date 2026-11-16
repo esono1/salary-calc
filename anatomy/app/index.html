@@ -358,7 +358,7 @@ footer.credit a { color: inherit; }
       <h5 class="sec-h" data-sec="settings">關於</h5>
       <div class="grp ver" role="group" aria-label="版本" data-sec="settings">
         <span class="lab">版本</span>
-        <span class="vtxt" id="verTxt">網頁 2026.11.17-0539</span>
+        <span class="vtxt" id="verTxt">網頁 2026.11.17-0544</span>
         <span class="vbtns"><button class="btn" id="verCheck">檢查更新</button><button class="btn" id="apkBtn" hidden>更新 App</button></span>
       </div>
       <p class="about" data-sec="settings">模型：Z-Anatomy（CC BY-SA 4.0），源自 BodyParts3D © DBCLS。僅供學習與繪畫參考，非醫療用途。</p>
@@ -1533,13 +1533,13 @@ footer.credit a { color: inherit; }
 </script>
 <script>
 (function () {
-  var files = ["d/c30d73c399-0.js","d/c30d73c399-1.js","d/c30d73c399-2.js","d/c30d73c399-3.js","d/c30d73c399-4.js","d/c30d73c399-5.js","d/c30d73c399-6.js","d/c30d73c399-7.js","d/c30d73c399-8.js","d/c30d73c399-9.js","d/c30d73c399-10.js","d/c30d73c399-11.js","d/c30d73c399-12.js","d/c30d73c399-13.js","d/c30d73c399-14.js","d/c30d73c399-15.js","d/c30d73c399-16.js","d/c30d73c399-17.js","d/c30d73c399-18.js"], done = 0, total = files.length + 1;
+  var files = ["d/19bfa7e8f7-0.js","d/19bfa7e8f7-1.js","d/19bfa7e8f7-2.js","d/19bfa7e8f7-3.js","d/19bfa7e8f7-4.js","d/19bfa7e8f7-5.js","d/19bfa7e8f7-6.js","d/19bfa7e8f7-7.js","d/19bfa7e8f7-8.js","d/19bfa7e8f7-9.js","d/19bfa7e8f7-10.js","d/19bfa7e8f7-11.js","d/19bfa7e8f7-12.js","d/19bfa7e8f7-13.js","d/19bfa7e8f7-14.js","d/19bfa7e8f7-15.js","d/19bfa7e8f7-16.js","d/19bfa7e8f7-17.js","d/19bfa7e8f7-18.js","d/19bfa7e8f7-19.js"], done = 0, total = files.length + 1;
   window.__parts = [];
   function prog() { var p = Math.round(done / total * 100), t = document.getElementById('ldTxt'), b = document.getElementById('ldBar'); if (t) t.textContent = '正在下載模型… ' + p + '%'; if (b) b.style.width = p + '%'; }
   window.__ld = function (i, s) { window.__parts[i] = s; };
   function load(src) { return new Promise(function (ok, bad) { var s = document.createElement('script'); s.src = src; s.onload = function () { done++; prog(); ok(); }; s.onerror = function () { bad(new Error('無法載入 ' + src)); }; document.head.appendChild(s); }); }
   window.__dataReady = (async function () {
-    await load("d/c30d73c399-meta.js");
+    await load("d/19bfa7e8f7-meta.js");
     for (var k = 0; k < files.length; k += 4) await Promise.all(files.slice(k, k + 4).map(load));
   })();
 })();
@@ -3048,7 +3048,7 @@ footer.credit a { color: inherit; }
   };
 
   // ---------- 版本與更新：顯示目前版本，打開或切回 App 時檢查網站上有沒有新版
-  const PAGE_VERSION = '2026.11.17-0539';
+  const PAGE_VERSION = '2026.11.17-0544';
   let appVer = '';
   try { if (window.AndroidBridge && typeof AndroidBridge.appVersion === 'function') appVer = String(AndroidBridge.appVersion()); } catch (e) {}
   const OFFLINE = location.protocol === 'file:';
