@@ -1673,10 +1673,22 @@ footer.credit a { color: inherit; }
     document.querySelectorAll('[data-theme-set]').forEach(b => b.classList.toggle('on', b.dataset.themeSet === pref));
     const cs = getComputedStyle(root);
     boneMesh.material.color.set(cs.getPropertyValue('--bone').trim());
+    syncBars();
     const lbl = { auto: '自動', light: '淺色', dark: '深色' }[pref];
     $('#mTheme').setAttribute('aria-label', '主題：' + lbl);
     $('#mTheme').title = '主題：' + lbl;
   }
+  // Android App：狀態列和導覽列的底色、圖示深淺跟著主題走
+  function syncBars() {
+    try {
+      const br = window.AndroidBridge;
+      if (!br || typeof br.setBarColors !== 'function') return;
+      const cs = getComputedStyle(root);
+      const dark = cs.getPropertyValue('--bg').trim().toLowerCase() === '#17131a';
+      br.setBarColors(cs.getPropertyValue('--stage').trim(), dark);
+    } catch (e) {}
+  }
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (themePref === 'auto') syncBars(); }); } catch (e) {}
   document.querySelectorAll('[data-theme-set]').forEach(b => b.onclick = () => applyTheme(b.dataset.themeSet, true));
   $('#mTheme').onclick = () => {
     const dark = getComputedStyle(root).getPropertyValue('--bg').trim().toLowerCase() === '#17131a';
@@ -1685,7 +1697,7 @@ footer.credit a { color: inherit; }
   applyTheme(themePref, false);
 
   // ---------- Android App：App 外殼太舊時提醒重新安裝（網頁內容本身會自動更新）
-  const LATEST_APK = '1.2';
+  const LATEST_APK = '1.3';
   const APK_URL = 'https://esono1.github.io/salary-calc/anatomy/muscle-atlas.apk';
   const verLess = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
   try {
