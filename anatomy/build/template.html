@@ -217,7 +217,7 @@ footer.credit a { color: inherit; }
   .toolbar, aside.index { display: none; }
   .toolbar.open, aside.index.open { display: flex; position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 30; background: var(--panel); border-radius: 16px 16px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.25); padding-bottom: env(safe-area-inset-bottom, 0px); }
   .toolbar.open { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); pointer-events: auto; }
-  .toolbar.open { bottom: var(--tabh); max-height: calc(86dvh - var(--tabh)); overflow-y: auto; gap: 8px; padding-bottom: 16px; }
+  .toolbar.open { bottom: var(--tabh); max-height: calc(86dvh - var(--tabh)); overflow-y: auto; gap: 8px; padding-top: 0; padding-bottom: 16px; }
   .toolbar.open > [data-sec] { display: none; }
   .toolbar.open[data-sec="layers"] > .grp[data-sec="layers"], .toolbar.open[data-sec="settings"] > .grp[data-sec="settings"] { display: flex; }
   .toolbar.open[data-sec="layers"] > .sec-h[data-sec="layers"], .toolbar.open[data-sec="settings"] > .sec-h[data-sec="settings"],
@@ -261,6 +261,12 @@ footer.credit a { color: inherit; }
 
   .card { position: fixed; top: auto; left: 0; right: 0; bottom: var(--tabh); width: auto; max-width: none; height: 46dvh; max-height: calc(88dvh - var(--tabh)); border-radius: 16px 16px 0 0; z-index: 20; }
   .card .grab { display: block; }
+  .toolbar.open > .grab, aside.index.open > .grab { display: block; }
+  .toolbar.open, aside.index.open { flex-wrap: nowrap; }
+  .toolbar.open.collapsed, aside.index.open.collapsed { overflow: hidden; box-shadow: 0 -4px 16px rgba(0,0,0,.25); }
+  .toolbar.open.collapsed > :not(.grab):not(.sheet-head) { display: none !important; }
+  aside.index.open.collapsed > :not(.grab):not(.brand) { display: none !important; }
+  aside.index.open.collapsed .brand { padding-top: 0; }
   .card.dragging { transition: none; user-select: none; }
   .card .hd { padding: 12px 16px 10px; }
   .card h2 { font-size: 19px; }
@@ -1082,7 +1088,7 @@ __GEO__
       <div class="bd">
         <h4>功能</h4><p class="fn">${c.info}</p>
         ${c.k === 'n' ? `<h4>支配的肌肉 · ${c.inn.length}</h4><div data-inn></div>` : ''}
-        <div class="note">${c.k === 'l' ? '淋巴結在原始模型中是一群一群的小圓點，同一個名稱常包含好幾顆。' : (c.k === 'a' || c.k === 'v') ? '紅色是動脈、藍色是靜脈（血管圖層的慣用顏色，和肌肉的收縮顏色無關）。' : c.k === 'o' ? '內臟位於肌肉和骨骼內側，要先剝掉外層肌肉或用「只看骨骼」才看得到。' : '神經支配依一般解剖學教科書整理；個體之間會有差異，部分肌肉由多條神經共同支配。'}</div>
+        <div class="note">${/示意/.test(c.zh) ? '原始模型沒有淋巴管；這條是依教科書位置、沿著模型的脊椎和靜脈畫出的示意圖。' : c.k === 'l' ? '淋巴結在原始模型中是一群一群的小圓點，同一個名稱常包含好幾顆。' : (c.k === 'a' || c.k === 'v') ? '紅色是動脈、藍色是靜脈（血管圖層的慣用顏色，和肌肉的收縮顏色無關）。' : c.k === 'o' ? '內臟位於肌肉和骨骼內側，要先剝掉外層肌肉或用「只看骨骼」才看得到。' : '神經支配依一般解剖學教科書整理；個體之間會有差異，部分肌肉由多條神經共同支配。'}</div>
       </div>`;
     if (c.k === 'n') {
       const el = card.querySelector('[data-inn]');
@@ -1727,8 +1733,44 @@ __GEO__
     closeSheets();
     if (same) return;
     if (sec) { el.dataset.sec = sec; $('#sheetTitle').textContent = sec === 'layers' ? '圖層' : '設定'; }
-    el.classList.add('open'); $('#scrim').hidden = false; updateTabs();
+    el.classList.add('open'); addSheetGrab(el); applySheetH(el); updateTabs();
   }
+  // 手機：圖層／設定／搜尋面板也可以拖曳把手調整高度，點一下收合；收合時可以直接操作後面的模型
+  const SHEET_MIN = 64;
+  const sheetKey = el => 'atlas-sheet-h-' + (el.id === 'index' ? 'search' : (el.dataset.sec || 'x'));
+  function sheetH(el) { try { return +localStorage.getItem(sheetKey(el)) || null; } catch (e) { return null; } }
+  function applySheetH(el) {
+    if (innerWidth > 820 || !el.classList.contains('open')) { el.style.height = ''; return; }
+    const h = sheetH(el), max = Math.round(innerHeight * 0.86);
+    el.style.height = h ? Math.max(SHEET_MIN, Math.min(max, h)) + 'px' : '';
+    el.classList.toggle('collapsed', !!h && h <= SHEET_MIN + 10);
+    $('#scrim').hidden = el.classList.contains('collapsed');
+  }
+  function setSheetH(el, h) { try { localStorage.setItem(sheetKey(el), h ? String(Math.round(h)) : ''); } catch (e) {} applySheetH(el); }
+  function addSheetGrab(el) {
+    if (el.querySelector(':scope > .grab')) return;
+    const h = document.createElement('div');
+    h.className = 'grab'; h.setAttribute('role', 'separator'); h.setAttribute('aria-label', '拖曳調整面板高度，點一下收合或展開'); h.tabIndex = 0;
+    el.prepend(h);
+    let y0 = 0, h0 = 0, moved = false;
+    h.addEventListener('pointerdown', e => { y0 = e.clientY; h0 = el.offsetHeight; moved = false; h.setPointerCapture(e.pointerId); });
+    h.addEventListener('pointermove', e => {
+      if (!h.hasPointerCapture(e.pointerId)) return;
+      const dy = y0 - e.clientY; if (Math.abs(dy) > 4) moved = true;
+      el.style.height = Math.max(SHEET_MIN, Math.min(innerHeight * 0.86, h0 + dy)) + 'px';
+    });
+    const end = e => {
+      if (!h.hasPointerCapture(e.pointerId)) return;
+      h.releasePointerCapture(e.pointerId);
+      if (!moved) setSheetH(el, el.offsetHeight > SHEET_MIN + 20 ? SHEET_MIN : null);
+      else setSheetH(el, el.offsetHeight);
+    };
+    h.addEventListener('pointerup', end); h.addEventListener('pointercancel', end);
+    h.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSheetH(el, el.offsetHeight > SHEET_MIN + 20 ? SHEET_MIN : null); }
+    });
+  }
+  addEventListener('resize', () => { applySheetH($('#toolbar')); applySheetH($('#index')); });
   $('#mLayers').onclick = () => openSheet($('#toolbar'), 'layers');
   $('#mOpts').onclick = () => openSheet($('#toolbar'), 'settings');
   // 底部分頁：模型／搜尋／動作／姿勢／測驗
