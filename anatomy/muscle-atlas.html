@@ -247,6 +247,10 @@ footer.credit a { color: inherit; }
         <span class="lab">主題</span>
         <button class="btn" data-theme-set="auto">自動</button><button class="btn" data-theme-set="light">淺色</button><button class="btn" data-theme-set="dark">深色</button>
       </div>
+      <div class="grp" role="group" aria-label="模型精細度">
+        <span class="lab">模型</span>
+        <button class="btn on" data-q="std">標準</button><button class="btn" data-q="hd" id="hdBtn">精細</button>
+      </div>
       <div class="grp desk-only" role="group" aria-label="工具">
         <span class="lab">工具</span>
         <button class="btn" data-tool="pick">動作查詢</button><button class="btn" data-tool="pose">擺姿勢</button>
@@ -479,11 +483,59 @@ footer.credit a { color: inherit; }
     MU.forEach((m, i) => { if (m.region === ri) { if (!names.has(m.en)) names.set(m.en, []); names.get(m.en).push(i); } });
     return { r, items: [...names.values()].sort((a, b) => MU[a[0]].layer - MU[b[0]].layer || MU[a[0]].zh.localeCompare(MU[b[0]].zh, 'zh-Hant')) };
   });
+  // ---------- 搜尋：俗稱、肌群名稱和常見說法（比對中文名）
+  const ALIAS = [
+    [['小腿肚', '小腿後側', '小腿三頭肌', '腓腸'], /腓腸肌|比目魚肌|跟腱|蹠肌/],
+    [['股四頭肌', '大腿前側', '四頭肌'], /股直肌|股外側肌|股內側肌|股中間肌/],
+    [['膕繩肌', '腿後肌', '大腿後側', '後大腿'], /股二頭肌|半腱肌|半膜肌/],
+    [['內收肌群', '大腿內側', '鼠蹊'], /內收|股薄肌|恥骨肌/],
+    [['旋轉肌袖', '肩袖', '旋轉袖', '肩旋轉肌'], /棘上肌|棘下肌|小圓肌|肩胛下肌/],
+    [['豎脊肌', '豎棘肌', '下背', '腰肌'], /髂肋肌|最長肌|棘肌（|^頸棘肌|^胸棘肌|^頭棘肌/],
+    [['腹肌', '六塊肌', '八塊肌', '肚子'], /腹直肌|腹外斜肌|腹內斜肌|腹橫肌/],
+    [['側腹', '腰側', '人魚線'], /腹外斜肌|腹內斜肌/],
+    [['核心'], /腹橫肌|多裂肌|腹內斜肌|橫膈膜|髂尾肌|恥尾肌/],
+    [['臀肌', '屁股', '臀部'], /臀大肌|臀中肌|臀小肌/],
+    [['深層外旋肌', '髖外旋肌', '深層臀肌'], /梨狀肌|孖肌|閉孔|股方肌/],
+    [['髂腰肌', '屈髖肌'], /髂肌|腰大肌/],
+    [['胸肌', '胸部'], /胸大肌|胸小肌/],
+    [['背肌', '上背'], /斜方肌|背闊肌|菱形肌|提肩胛肌/],
+    [['闊背肌', '翅膀'], /背闊肌/],
+    [['肩胛提肌'], /提肩胛肌/],
+    [['肩膀', '肩部'], /三角肌|棘上肌/],
+    [['手臂前側', '上臂前側'], /肱二頭肌|肱肌|喙肱肌/],
+    [['前臂屈肌', '前臂內側'], /屈腕|屈指|掌長肌|旋前圓肌|屈拇長肌/],
+    [['前臂伸肌', '前臂外側'], /伸腕|伸指|伸食指|伸小指|伸拇|外展拇長肌|肱橈肌/],
+    [['三頭', '掰掰肉', '蝴蝶袖', '手臂後側'], /肱三頭肌|肘肌/],
+    [['前臂肌'], /屈腕|伸腕|屈指|伸指|旋前|旋後|肱橈肌|掌長肌|拇長/],
+    [['大魚際', '拇指球'], /拇短肌|拇對掌肌|屈拇短肌|內收拇肌/],
+    [['小魚際'], /小指/],
+    [['脛前', '小腿前側'], /脛前肌|伸趾長肌|伸拇趾長肌|第三腓骨肌/],
+    [['腓骨肌', '小腿外側'], /腓骨長肌|腓骨短肌/],
+    [['足底', '腳底'], /足|趾短|蹠方肌|拇趾|小趾/],
+    [['咀嚼肌', '咬肌群'], /咬肌|顳肌|翼內肌|翼外肌/],
+    [['表情肌', '臉部'], /口輪匝|眼輪匝|顴|笑肌|降口角|降下唇|提上唇|提口角|頦肌|鼻肌|降眉間|皺眉|額肌|頰肌/],
+    [['眼肌', '眼外肌'], /直肌（眼）|斜肌（眼）|提上瞼肌/],
+    [['頸部', '脖子'], /胸鎖乳突肌|斜角肌|頸長肌|頭長肌|頸闊肌|頭夾肌|頸夾肌/],
+    [['斜角肌'], /斜角肌/],
+    [['舌骨肌', '舌骨上肌', '舌骨下肌'], /舌骨|二腹肌/],
+    [['呼吸肌', '肋間肌'], /橫膈膜|肋間|斜角肌|提肋/],
+    [['骨盆底', '凱格爾'], /尾骨肌|髂尾肌|恥尾肌|恥骨肛門肌|提肛|肛門外括約肌/],
+  ];
+  const norm = s => s.toLowerCase().replace(/[\s　（）()／、]/g, '').replace(/[肌群]/g, '');
+  function searchHit(m, q) {
+    const exact = ALIAS.find(([keys]) => keys.includes(q));
+    if (exact) return exact[1].test(m.zh);
+    if ((m.zh + m.en + m.la).toLowerCase().replace(/\s+/g, '').includes(q)) return true;
+    const nq = norm(q);
+    // 去掉「肌」後再比對（「內收肌」找得到「內收長肌」），但至少要剩兩個字，避免「腹肌」配到「二腹肌」
+    if (nq.length >= 2 && norm(m.zh).includes(nq)) return true;
+    return ALIAS.some(([keys, re]) => keys.some(k => k === q || (q.length >= 2 && (k.includes(q) || q.includes(k))) || (nq.length >= 2 && norm(k).includes(nq))) && re.test(m.zh));
+  }
   function renderList() {
-    const q = $('#q').value.trim().toLowerCase();
+    const q = $('#q').value.trim().toLowerCase().replace(/[\s　]+/g, '');
     const frag = document.createDocumentFragment();
     groups.forEach(g => {
-      const items = g.items.filter(ix => { const m = MU[ix[0]]; return !q || (m.zh + ' ' + m.en + ' ' + m.la).toLowerCase().includes(q); });
+      const items = g.items.filter(ix => !q || searchHit(MU[ix[0]], q));
       if (!items.length) return;
       const h = document.createElement('h3'); h.textContent = g.r + ' · ' + items.length; frag.appendChild(h);
       items.forEach(ix => {
@@ -768,13 +820,61 @@ footer.credit a { color: inherit; }
     const dir = ax === 'x' ? new THREE.Vector3(side * 0.94, 0.08, 0.33) : new THREE.Vector3(side * 0.15, 0.1, 0.98);
     tween(target.clone().addScaledVector(dir.normalize(), d), target);
   }
-  function stopAction(silent) { play.key = null; play.muscle = -1; poseBones(null); if (!silent) renderCard(); }
+  function stopAction(silent) { play.key = null; play.muscle = -1; poseBones(null); setBulge([], 0); if (!silent) renderCard(); }
   function tickAction(now) {
     if (!play.key) return;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const t = ((now - play.t0) % PERIOD) / PERIOD;
     const p = reduce ? 1 : (1 - Math.cos(t * Math.PI * 2)) / 2;
     poseBones(play.key, play.side, p);
+    const who = play.muscle >= 0 ? [play.muscle] : st.act ? [...involved(st.act.key, st.act.side).keys()] : [];
+    setBulge(who, p);
+  }
+
+  // ---------- 收縮時肌腹鼓起：沿肌肉長軸算出往外的位移（中段最大、兩端和肌腱為 0），用 morph target 套上
+  const BULGE = 0.3, BULGE_MAX = 0.007;
+  function ensureBulge(i) {
+    const mesh = meshes[i], g = mesh.geometry;
+    if (g.userData.bulge) return;
+    const pos = g.attributes.position.array, n = pos.length / 3, flag = MU[i].flag;
+    const c = new THREE.Vector3();
+    for (let v = 0; v < n; v++) c.x += pos[v * 3], c.y += pos[v * 3 + 1], c.z += pos[v * 3 + 2];
+    c.multiplyScalar(1 / n);
+    // principal axis by power iteration on the covariance matrix
+    const C = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    for (let v = 0; v < n; v++) {
+      const d = [pos[v * 3] - c.x, pos[v * 3 + 1] - c.y, pos[v * 3 + 2] - c.z];
+      for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) C[a * 3 + b] += d[a] * d[b];
+    }
+    let ax = new THREE.Vector3(0.3, 1, 0.2).normalize();
+    for (let it = 0; it < 30; it++) {
+      ax.set(C[0] * ax.x + C[1] * ax.y + C[2] * ax.z, C[3] * ax.x + C[4] * ax.y + C[5] * ax.z, C[6] * ax.x + C[7] * ax.y + C[8] * ax.z).normalize();
+    }
+    let lo = Infinity, hi = -Infinity;
+    const proj = new Float32Array(n), p = new THREE.Vector3(), r = new THREE.Vector3();
+    for (let v = 0; v < n; v++) { p.fromArray(pos, v * 3).sub(c); proj[v] = p.dot(ax); lo = Math.min(lo, proj[v]); hi = Math.max(hi, proj[v]); }
+    const disp = new Float32Array(n * 3);
+    for (let v = 0; v < n; v++) {
+      if (flag[v]) continue;
+      const t = (proj[v] - lo) / (hi - lo || 1);
+      p.fromArray(pos, v * 3).sub(c);
+      r.copy(p).addScaledVector(ax, -proj[v]);
+      r.multiplyScalar(BULGE * Math.sin(Math.PI * t));
+      if (r.length() > BULGE_MAX) r.setLength(BULGE_MAX);
+      disp[v * 3] = r.x; disp[v * 3 + 1] = r.y; disp[v * 3 + 2] = r.z;
+    }
+    g.morphAttributes.position = [new THREE.BufferAttribute(disp, 3)];
+    g.morphTargetsRelative = true;
+    g.userData.bulge = true;
+    mesh.updateMorphTargets();
+    mesh.material.needsUpdate = true;
+  }
+  let bulging = new Set();
+  function setBulge(list, p) {
+    const next = new Set(list);
+    for (const i of bulging) if (!next.has(i) && meshes[i].morphTargetInfluences) meshes[i].morphTargetInfluences[0] = 0;
+    for (const i of next) { ensureBulge(i); meshes[i].morphTargetInfluences[0] = p; }
+    bulging = next;
   }
 
   // ---------- 用動作找肌肉
@@ -949,6 +1049,57 @@ footer.credit a { color: inherit; }
     });
   }
 
+  // ---------- 模型精細度：精細版是另一個檔案，選了才下載
+  const HD_URL = 'app/hd.bin';
+  const stdGeo = meshes.map(m => m.geometry), stdFlag = MU.map(m => m.flag), stdNv = MU.map(m => m.nv);
+  let hdGeo = null, hdFlag = null, hdNv = null, hdLoading = false, quality = 'std';
+  function setQualityUI(msg) {
+    document.querySelectorAll('[data-q]').forEach(b => b.classList.toggle('on', b.dataset.q === quality));
+    $('#hdBtn').textContent = msg || '精細';
+  }
+  function useGeometry(q) {
+    const G = q === 'hd' ? hdGeo : stdGeo, F = q === 'hd' ? hdFlag : stdFlag, N = q === 'hd' ? hdNv : stdNv;
+    setBulge([], 0);
+    meshes.forEach((mesh, i) => { mesh.geometry = G[i]; MU[i].flag = F[i]; MU[i].nv = N[i]; mesh.updateMorphTargets(); mesh.material.needsUpdate = true; });
+    quality = q; paint(); setQualityUI();
+    try { localStorage.setItem('atlas-quality', q); } catch (e) {}
+  }
+  async function loadHD() {
+    if (hdGeo) return useGeometry('hd');
+    if (hdLoading) return;
+    hdLoading = true; setQualityUI('精細（下載中…）');
+    try {
+      const res = await fetch(HD_URL);
+      if (!res.ok) throw new Error(res.status);
+      const buf = await new Response(res.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+      const len = new DataView(buf).getUint32(0, true);
+      const list = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, len)));
+      const base = 4 + len + ((4 - (4 + len) % 4) % 4);
+      hdGeo = []; hdFlag = []; hdNv = [];
+      list.forEach((h, i) => {
+        const g = new THREE.BufferGeometry();
+        const qv = new Uint16Array(buf, base + h.p, h.nv * 3), f = new Float32Array(h.nv * 3);
+        for (let k = 0; k < f.length; k++) { const a = k % 3; f[k] = META.min[a] + qv[k] / 65535 * META.size[a]; }
+        g.setAttribute('position', new THREE.BufferAttribute(f, 3));
+        g.setIndex(new THREE.BufferAttribute(h.u32 ? new Uint32Array(buf, base + h.i, h.ni) : new Uint16Array(buf, base + h.i, h.ni), 1));
+        g.computeVertexNormals(); g.computeBoundingSphere();
+        g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(h.nv * 3), 3));
+        const sw = new Uint8Array(buf, base + h.w, h.nv * 8), si = new Uint16Array(h.nv * 4), sws = new Float32Array(h.nv * 4);
+        for (let v = 0; v < h.nv; v++) for (let k = 0; k < 4; k++) { si[v * 4 + k] = sw[v * 8 + k]; sws[v * 4 + k] = sw[v * 8 + 4 + k] / 255; }
+        g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+        g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
+        hdGeo.push(g); hdFlag.push(new Uint8Array(buf, base + h.f, h.nv)); hdNv.push(h.nv);
+      });
+      hdLoading = false;
+      useGeometry('hd');
+    } catch (e) {
+      hdLoading = false; quality = 'std';
+      setQualityUI('精細（下載失敗，請連網後再試）');
+    }
+  }
+  document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => b.dataset.q === 'hd' ? loadHD() : useGeometry('std'));
+  try { if (localStorage.getItem('atlas-quality') === 'hd') setTimeout(loadHD, 300); } catch (e) {}
+
   // ---------- mobile sheets
   function closeSheets() { $('#toolbar').classList.remove('open'); $('#index').classList.remove('open'); $('#scrim').hidden = true; }
   function openSheet(el) { closeSheets(); el.classList.add('open'); $('#scrim').hidden = false; }
@@ -1034,6 +1185,6 @@ footer.credit a { color: inherit; }
   paint(); apply(); renderCard();
   { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist()); }
   requestAnimationFrame(loop);
-  window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved };
+  window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved, setBulge };
 })();
 </script>

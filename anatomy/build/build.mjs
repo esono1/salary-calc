@@ -69,7 +69,7 @@ for (const s of manifest.structures) {
   const path = [s.id, ...anc].join(' ');
   const region = (REGIONS.find(([re]) => re.test(path)) || [0, '其他'])[1];
   const tendonShare = g.flag.reduce((a, b) => a + b, 0) / g.flag.length;
-  M.push({ id: s.id, en: name.replace(/^\((.*)\)$/, '$1'), la: la[s.id]?.name || '', zh: zh || name, side: s.side === 'left' ? 'L' : s.side === 'right' ? 'R' : '', region, g, allTendon: tendonShare > 0.95 });
+  M.push({ meshId: s.meshes[0], id: s.id, en: name.replace(/^\((.*)\)$/, '$1'), la: la[s.id]?.name || '', zh: zh || name, side: s.side === 'left' ? 'L' : s.side === 'right' ? 'R' : '', region, g, allTendon: tendonShare > 0.95 });
 }
 // --- source fix: Z-Anatomy labels the upper and lower trapezius the other way round; swap by height
 for (const side of ['L', 'R']) {
@@ -251,6 +251,46 @@ const bin = Buffer.concat(chunks);
 fs.writeFileSync(OUT + '/body.bin', zlib.gzipSync(bin, { level: 9 }));
 fs.writeFileSync(OUT + '/meta.json', JSON.stringify(meta));
 console.log('bin', bin.length, 'gz', fs.statSync(OUT + '/body.bin').size, 'meta', fs.statSync(OUT + '/meta.json').size);
+
+// ---- optional high-detail muscles (hd.bin): source "standard" meshes simplified to HD_RATIO, same order as meta.muscles
+if (process.env.HD) {
+  const { MeshoptSimplifier } = await import('meshoptimizer');
+  await MeshoptSimplifier.ready;
+  const RATIO = +(process.env.HD_RATIO || 0.5);
+  const hdMeshes = new Map();
+  for (const ch of manifest.chunks.filter(c => c.system === 'muscular')) for (const [k, v] of await decodeChunk(ch, 'standard')) hdMeshes.set(k, v);
+  const hc = []; let ho = 0;
+  const hpush = (ta) => { const buf = Buffer.from(ta.buffer, ta.byteOffset, ta.byteLength); const o = ho; hc.push(buf); ho += buf.length; if (ho % 4) { const pad = 4 - ho % 4; hc.push(Buffer.alloc(pad)); ho += pad; } return o; };
+  const list = [];
+  let tris = 0, verts = 0;
+  const t0 = Date.now();
+  for (const m of M) {
+    const raw = hdMeshes.get(m.meshId);
+    let g = raw ? weld(raw, isTendon) : m.g;
+    if (raw && g.idx.length / 3 > 400) {
+      const target = Math.max(300, Math.floor(g.idx.length / 3 * RATIO)) * 3;
+      const [ix] = MeshoptSimplifier.simplify(g.idx, g.pos, 3, target, 0.002, []);
+      const remap = new Int32Array(g.pos.length / 3).fill(-1), pos = [], flag = [];
+      const idx = new Uint32Array(ix.length);
+      for (let k = 0; k < ix.length; k++) {
+        const v = ix[k];
+        if (remap[v] < 0) { remap[v] = pos.length / 3; pos.push(g.pos[v * 3], g.pos[v * 3 + 1], g.pos[v * 3 + 2]); flag.push(g.flag[v]); }
+        idx[k] = remap[v];
+      }
+      g = { pos: new Float32Array(pos), idx, flag: new Uint8Array(flag) };
+    }
+    const nv = g.pos.length / 3, wide = nv > 65535;
+    const w = muscleWeights(g, RIG.segBVH);
+    list.push({ nv, ni: g.idx.length, u32: wide ? 1 : 0, p: hpush(q(g.pos)), i: hpush(wide ? Uint32Array.from(g.idx) : Uint16Array.from(g.idx)), f: hpush(g.flag), w: hpush(w) });
+    tris += g.idx.length / 3; verts += nv;
+  }
+  const head = Buffer.from(JSON.stringify(list));
+  const lenBuf = Buffer.alloc(4); lenBuf.writeUInt32LE(head.length);
+  const pad = Buffer.alloc((4 - (head.length + 4) % 4) % 4, 0x20);
+  const hdBin = Buffer.concat([lenBuf, head, pad, ...hc]);
+  fs.writeFileSync(OUT + '/hd.bin', zlib.gzipSync(hdBin, { level: 9 }));
+  console.log('hd tris', tris, 'verts', verts, 'raw', hdBin.length, 'gz', fs.statSync(OUT + '/hd.bin').size, ((Date.now() - t0) / 1000).toFixed(0) + 's');
+}
 
 // ---- sanity report
 const find = (z, side = 'R') => M.findIndex(m => m.zh.startsWith(z) && m.side === side);

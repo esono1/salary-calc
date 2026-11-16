@@ -9,6 +9,9 @@
 - 起點與止點：點選肌肉後，骨頭上會用紅色（起點）和藍色（止點）標出附著位置，並列出所在的骨頭（`build/attach.mjs`）。原始模型只標了長在骨頭上的附著點，有些肌肉只畫了一側，已自動鏡像到另一側。
 - 動作查詢：選一個關節動作（例如右肩外展），負責的主要肌肉和輔助肌肉會亮起來，其他變透明，並播放動作。
 - 擺姿勢：用滑桿調整每個關節的角度，或套用預設姿勢（坐姿、跑步、深蹲等）。
+- 收縮鼓起：播放動作時，收縮中的肌肉肌腹會沿長軸鼓起（肌腱不變）。
+- 搜尋別名：可以用俗稱或肌群名稱搜尋，例如小腿肚、股四頭肌、旋轉肌袖、豎脊肌、膕繩肌。
+- 精細模型：「顯示 → 模型 → 精細」會下載 `app/hd.bin`（約 5 MB，三角形約為標準版的 2 倍），選擇會被記住。
 
 ## 三種用法
 
@@ -22,7 +25,7 @@ Android 專案用 `app/sideload.keystore`（密碼 `android`）簽章，讓每�
 
 ## 重新產生
 
-`build/` 內是產生資料的腳本。需要 npm 套件 `@authorod/svitylo-3d-anatomy-data@1.2.0`、`three@0.160.0`、`three-mesh-bvh@0.7.8`、`meshoptimizer`。依序執行 `node build.mjs`（Q=economy 或 standard），再執行 `node assemble.mjs`（單一網頁）和 `node assemble-app.mjs ../app`（離線版，需要 three@0.147.0）。
+`build/` 內是產生資料的腳本。需要 npm 套件 `@authorod/svitylo-3d-anatomy-data@1.2.0`、`three@0.160.0`、`three-mesh-bvh@0.7.8`、`meshoptimizer`。依序執行 `HD=1 node build.mjs`（HD=1 會另外產生精細模型 `hd.bin`，放到 `app/`），再執行 `node assemble.mjs`（單一網頁）和 `node assemble-app.mjs ../app`（離線版，需要 three@0.147.0）。
 
 已知的資料修正：
 - 原始模型的斜方肌上部與下部名稱標反，已依高度對調。
