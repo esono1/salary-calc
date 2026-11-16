@@ -2,7 +2,10 @@ package tw.anatomy.atlas;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.PackageInstaller;
+import android.provider.Settings;
 import android.graphics.Color;
 import android.graphics.Insets;
 import android.net.Uri;
@@ -21,6 +24,11 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 /**
  * 肌肉圖譜 App。
@@ -44,6 +52,10 @@ public class MainActivity extends Activity {
         public String appVersion() { return BuildConfig.VERSION_NAME; }
 
         /** 網頁切換深淺色時，讓狀態列、導覽列跟著換底色和圖示顏色 */
+        /** 網頁按「更新 App」：下載新版 APK，下載完跳出系統的安裝確認 */
+        @JavascriptInterface
+        public void installUpdate(String url) { runOnUiThread(() -> startInstall(url)); }
+
         /** 網頁按「改用線上版」時，重新讀網站 */
         @JavascriptInterface
         public void retryOnline() { runOnUiThread(MainActivity.this::loadOnline); }
@@ -142,6 +154,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        // 剛從「允許安裝」設定頁回來：繼續下載安裝
+        if (pendingUrl != null && (Build.VERSION.SDK_INT < 26 || getPackageManager().canRequestPackageInstalls())) {
+            String u = pendingUrl; pendingUrl = null; startInstall(u); return;
+        }
         if (usingBuiltIn && web != null) loadOnline();
     }
 
@@ -149,6 +165,84 @@ public class MainActivity extends Activity {
         if ("file".equals(u.getScheme())) return true;
         String path = u.getPath() == null ? "" : u.getPath();
         return "https".equals(u.getScheme()) && ONLINE_HOST.equals(u.getHost()) && path.startsWith(ONLINE_PATH);
+    }
+
+    // ---------- App 內更新：用系統的 PackageInstaller 安裝下載的 APK（使用者仍需按「安裝」確認）
+    private static final String ACTION_INSTALL = "tw.anatomy.atlas.INSTALL_STATUS";
+    private String pendingUrl = null;
+    private boolean installing = false;
+
+    private void tellPage(String js) {
+        if (web != null) web.post(() -> web.evaluateJavascript("try{" + js + "}catch(e){}", null));
+    }
+
+    private void startInstall(String url) {
+        if (installing) return;
+        // Android 8 以上：第一次需要允許「安裝不明應用程式」
+        if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+            pendingUrl = url;
+            tellPage("window.__apkStatus&&__apkStatus('perm')");
+            try {
+                startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName())));
+            } catch (Exception e) { tellPage("window.__apkStatus&&__apkStatus('error','無法開啟設定')"); }
+            return;
+        }
+        installing = true;
+        new Thread(() -> {
+            PackageInstaller.Session session = null;
+            try {
+                PackageInstaller pi = getPackageManager().getPackageInstaller();
+                PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+                int id = pi.createSession(params);
+                session = pi.openSession(id);
+                HttpURLConnection c = (HttpURLConnection) new URL(url + (url.contains("?") ? "&" : "?") + "t=" + System.currentTimeMillis()).openConnection();
+                c.setUseCaches(false);
+                c.connect();
+                if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
+                long total = c.getContentLengthLong(), done = 0;
+                int lastPct = -1;
+                try (InputStream in = c.getInputStream(); OutputStream out = session.openWrite("app.apk", 0, total > 0 ? total : -1)) {
+                    byte[] buf = new byte[65536];
+                    int n;
+                    while ((n = in.read(buf)) > 0) {
+                        out.write(buf, 0, n);
+                        done += n;
+                        int pct = total > 0 ? (int) (done * 100 / total) : -1;
+                        if (pct != lastPct && pct % 5 == 0) { lastPct = pct; final int p = pct; tellPage("window.__apkStatus&&__apkStatus('progress'," + p + ")"); }
+                    }
+                    session.fsync(out);
+                }
+                Intent i = new Intent(this, MainActivity.class).setAction(ACTION_INSTALL);
+                int flags = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
+                PendingIntent pend = PendingIntent.getActivity(this, 0, i, flags);
+                tellPage("window.__apkStatus&&__apkStatus('confirm')");
+                session.commit(pend.getIntentSender());
+                session.close();
+            } catch (Exception e) {
+                if (session != null) try { session.abandon(); } catch (Exception ignored) { }
+                installing = false;
+                final String msg = String.valueOf(e.getMessage()).replace("'", " ");
+                tellPage("window.__apkStatus&&__apkStatus('error','" + msg + "')");
+            }
+        }).start();
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (intent == null || !ACTION_INSTALL.equals(intent.getAction())) return;
+        int status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
+        if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+            Intent confirm = intent.getParcelableExtra(Intent.EXTRA_INTENT);
+            if (confirm != null) { confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(confirm); }
+            return;
+        }
+        installing = false;
+        if (status != PackageInstaller.STATUS_SUCCESS) {
+            String msg = String.valueOf(intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)).replace("'", " ");
+            tellPage("window.__apkStatus&&__apkStatus('error','" + msg + "')");
+        }
     }
 
     /** 讀不到網站時改用 APK 內建的網頁，並把原因帶給網頁顯示 */

@@ -163,29 +163,64 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 footer.credit { font-size: 10.5px; color: var(--muted); padding: 8px 16px 12px max(16px, env(safe-area-inset-left, 0px)); border-top: 1px solid var(--line); line-height: 1.5; }
 footer.credit a { color: inherit; }
 
-.mbar, .sheet-x, .scrim { display: none; }
+.mbar, .sheet-x, .scrim, .sec-h, .vcluster, .tabs, .io, .about { display: none; }
+.vbtns { display: inline-flex; gap: 2px; }
+.toast { position: absolute; left: 50%; transform: translateX(-50%); bottom: 120px; z-index: 45; display: flex; align-items: center; gap: 12px; background: var(--fg); color: var(--bg); border-radius: 10px; padding: 9px 10px 9px 14px; font-size: 13px; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+.toast[hidden] { display: none !important; }
+.toast span { min-width: 0; }
+.toast button { white-space: nowrap; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; padding: 2px 6px; }
+.fab { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--fg); box-shadow: var(--shadow); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.fab svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fab:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 7px 11px; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; font-size: 13px; }
 .icon-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 @media (max-width: 820px) {
+  :root { --tabh: calc(58px + env(safe-area-inset-bottom, 0px)); }
   .app { display: block; height: 100%; }
+  .tabs { display: flex; position: fixed; left: 0; right: 0; bottom: 0; height: var(--tabh); padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); background: var(--panel); border-top: 1px solid var(--line); z-index: 40; }
+  .tabs button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; padding: 0; }
+  .tabs button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .tabs button.on { color: var(--accent); font-weight: 700; }
+  .vcluster { display: flex; flex-direction: column; gap: 8px; position: absolute; z-index: 5; top: calc(64px + env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); }
+  .toast { top: calc(64px + env(safe-area-inset-top, 0px)); bottom: auto; max-width: calc(100% - 120px); }
+  .update { top: calc(64px + env(safe-area-inset-top, 0px)); left: 10px; right: 64px; transform: none; max-width: none; }
+  .io { display: inline; font-size: 11px; color: var(--muted); flex: none; }
   main.stage { position: fixed; inset: 0; }
   .mbar { display: flex; position: absolute; z-index: 5; top: calc(8px + env(safe-area-inset-top, 0px)); left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); gap: 6px; align-items: center; }
   .desk-only { display: none !important; }
   .mbar .icon-btn { padding: 7px 9px; }
   .mbar .icon-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .mbar .ttl { visibility: hidden; flex: 1; min-width: 0; font-family: var(--font-head); font-size: 16px; font-weight: 700; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 6px var(--stage); }
+  .mbar .ttl { flex: 1; min-width: 0; font-family: var(--font-head); font-size: 16px; font-weight: 700; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 6px var(--stage); }
   .scrim:not([hidden]) { display: block; position: fixed; inset: 0; background: rgba(20, 10, 15, .35); z-index: 25; }
 
   /* sheets */
   .toolbar, aside.index { display: none; }
   .toolbar.open, aside.index.open { display: flex; position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 30; background: var(--panel); border-radius: 16px 16px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.25); padding-bottom: env(safe-area-inset-bottom, 0px); }
   .toolbar.open { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); pointer-events: auto; }
-  .toolbar.open .grp { box-shadow: none; justify-content: space-between; flex-wrap: wrap; }
-  .toolbar.open .grp .lab { display: inline; min-width: 3em; }
+  .toolbar.open { bottom: var(--tabh); max-height: calc(86dvh - var(--tabh)); overflow-y: auto; gap: 8px; padding-bottom: 16px; }
+  .toolbar.open > [data-sec] { display: none; }
+  .toolbar.open[data-sec="layers"] > .grp[data-sec="layers"], .toolbar.open[data-sec="settings"] > .grp[data-sec="settings"] { display: flex; }
+  .toolbar.open[data-sec="layers"] > .sec-h[data-sec="layers"], .toolbar.open[data-sec="settings"] > .sec-h[data-sec="settings"],
+  .toolbar.open[data-sec="settings"] > .about[data-sec="settings"] { display: block; }
+  .toolbar.open .sec-h { margin: 8px 2px 0; font-size: 12px; font-weight: 500; letter-spacing: .08em; color: var(--muted); }
+  .toolbar.open .grp { box-shadow: none; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+  .toolbar.open .grp .lab { display: none; }
+  .toolbar.open[data-sec="settings"] .grp:not(.ver) .lab { display: inline; flex: none; min-width: 3.2em; padding: 0 4px 0 8px; font-size: 12px; color: var(--muted); }
+  .toolbar.open .grp .btn { flex: 1; }
+  .toolbar.open .grp.layers { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; background: none; border: 0; padding: 0; }
+  .toolbar.open[data-sec="layers"] > .grp.layers[data-sec="layers"] { display: grid; }
+  .toolbar.open .grp.layers .btn { border: 1px solid var(--line); background: var(--panel); padding: 10px 6px; }
+  .toolbar.open .grp.layers .btn.on { background: var(--accent); border-color: var(--accent); }
+  .toolbar.open .grp.ver { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px; }
+  .toolbar.open .grp.ver .vtxt { padding: 0; font-size: 13px; color: var(--fg); line-height: 1.5; }
+  .toolbar.open .grp.ver .vbtns { gap: 6px; }
+  .toolbar.open .grp.ver .vbtns .btn { border: 1px solid var(--line); }
+  .toolbar.open .about { margin: 4px 2px 0; font-size: 11px; color: var(--muted); line-height: 1.6; }
   .toolbar.open input[type=range] { flex: 1; width: auto; }
-  aside.index.open { height: 82dvh; flex-direction: column; border-right: 0; }
+  aside.index.open { bottom: var(--tabh); height: calc(86dvh - var(--tabh)); padding-bottom: 0; flex-direction: column; border-right: 0; }
   .sheet-x { display: inline-flex; float: right; }
   .toolbar.open .mobile-only { display: flex; }
   .sheet-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 15px; }
@@ -194,7 +229,7 @@ footer.credit a { color: inherit; }
   footer.credit { display: none; }
 
   /* compact layer bar */
-  .legend { left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); max-width: none; padding: 8px; display: flex; align-items: center; gap: 6px; }
+  .legend { left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(var(--tabh) + 8px); max-width: none; padding: 8px; display: flex; align-items: center; gap: 6px; }
   .legend .t { display: none; }
   .legend .chips { flex-wrap: nowrap; gap: 4px; overflow-x: auto; flex: 1; min-width: 0; }
   .chip { padding: 0; width: 30px; height: 30px; justify-content: center; flex: none; font-size: 0; position: relative; }
@@ -207,7 +242,7 @@ footer.credit a { color: inherit; }
   .removed { display: none !important; }
   body.card-open .legend { display: none; }
 
-  .card { position: fixed; top: auto; left: 0; right: 0; bottom: 0; width: auto; max-width: none; height: 48dvh; max-height: 88dvh; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 20; }
+  .card { position: fixed; top: auto; left: 0; right: 0; bottom: var(--tabh); width: auto; max-width: none; height: 46dvh; max-height: calc(88dvh - var(--tabh)); border-radius: 16px 16px 0 0; z-index: 20; }
   .card .grab { display: block; }
   .card.dragging { transition: none; user-select: none; }
   .card .hd { padding: 12px 16px 10px; }
@@ -239,60 +274,69 @@ footer.credit a { color: inherit; }
   <main class="stage">
     <canvas id="gl"></canvas>
     <div class="mbar">
-      <button class="icon-btn" id="mList" aria-label="肌肉清單"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>清單</button>
+      <button class="icon-btn" id="mLayers" aria-label="圖層：選擇要顯示的組織"><svg viewBox="0 0 24 24"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>圖層</button>
       <div class="ttl">全身肌肉分層圖譜</div>
-      <button class="icon-btn" data-tool="pick" aria-label="用動作找肌肉"><svg viewBox="0 0 24 24"><path d="M5 12h4l3-7 3 14 3-7h1"/></svg>動作</button>
-      <button class="icon-btn" data-tool="pose" aria-label="擺姿勢"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M7 9l5 2 5-2M9 21l3-7 3 7"/></svg>姿勢</button>
-      <button class="icon-btn" data-lock aria-pressed="false" aria-label="鎖定視角"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path class="shackle" d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
-      <button class="icon-btn" id="mTheme" aria-label="切換主題"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
-      <button class="icon-btn" id="mOpts" aria-label="顯示設定"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>顯示</button>
+      <button class="icon-btn" id="mOpts" aria-label="設定"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>設定</button>
+    </div>
+    <div class="vcluster" role="group" aria-label="視角">
+      <button class="fab" data-lock aria-pressed="false" aria-label="鎖定視角"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path class="shackle" d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
+      <button class="fab" id="fabTurn" aria-label="轉到下一個方向（前、右、後、左）"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg></button>
+      <button class="fab" id="fabHome" aria-label="回到正面全身"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 7v7M8 10h8M9 21l3-7 3 7"/></svg></button>
     </div>
     <div class="loading" id="loading">正在載入模型…</div>
-    <div class="toolbar" id="toolbar">
-      <div class="sheet-head mobile-only"><span>顯示設定</span><button class="btn sheet-x" data-close aria-label="關閉">✕</button></div>
-      <div class="grp" role="group" aria-label="視角">
+    <div class="toolbar" id="toolbar" data-sec="layers">
+      <div class="sheet-head mobile-only"><span id="sheetTitle">圖層</span><button class="btn sheet-x" data-close aria-label="關閉">✕</button></div>
+
+      <h5 class="sec-h" data-sec="layers">要顯示的組織</h5>
+      <div class="grp layers" role="group" aria-label="顯示的組織" data-sec="layers">
+        <span class="lab">組織</span>
+        <button class="btn" id="bones">骨骼</button><button class="btn" id="bonesOnly">只看骨骼</button>
+        <button class="btn" data-ct="0">筋膜</button><button class="btn" data-ct="1">滑液囊</button><button class="btn" data-ct="2">腱鞘</button>
+        <button class="btn" data-sys="n">神經</button><button class="btn" data-sys="l">淋巴</button>
+      </div>
+      <h5 class="sec-h" data-sec="layers">左右</h5>
+      <div class="grp" role="group" aria-label="左右" data-sec="layers">
+        <span class="lab">左右</span>
+        <button class="btn on" data-side="">雙側</button><button class="btn" data-side="R">只看右半</button><button class="btn" data-side="L">只看左半</button>
+      </div>
+      <h5 class="sec-h" data-sec="layers">分離各層</h5>
+      <div class="grp" data-sec="layers"><span class="lab">分離</span><input id="explode" type="range" min="0" max="100" value="0" aria-label="分離各層的程度"></div>
+
+      <h5 class="sec-h" data-sec="settings">外觀</h5>
+      <div class="grp" role="group" aria-label="上色" data-sec="settings">
+        <span class="lab">上色</span>
+        <button class="btn on" data-color="layer">依層次</button><button class="btn" data-color="natural">肌肉色</button>
+      </div>
+      <div class="grp" role="group" aria-label="主題" data-sec="settings">
+        <span class="lab">主題</span>
+        <button class="btn" data-theme-set="auto">自動</button><button class="btn" data-theme-set="light">淺色</button><button class="btn" data-theme-set="dark">深色</button>
+      </div>
+      <div class="grp" role="group" aria-label="模型精細度" data-sec="settings">
+        <span class="lab">模型</span>
+        <button class="btn on" data-q="std">標準</button><button class="btn" data-q="hd" id="hdBtn">精細</button>
+      </div>
+      <h5 class="sec-h" data-sec="settings">視角</h5>
+      <div class="grp" role="group" aria-label="視角" data-sec="settings">
         <span class="lab">視角</span>
         <button class="btn" data-view="front">前</button><button class="btn" data-view="back">後</button><button class="btn" data-view="left">左</button><button class="btn" data-view="right">右</button>
         <button class="btn" data-lock aria-pressed="false" title="鎖定後，按任何按鈕都不會移動鏡頭">鎖定視角</button>
       </div>
-      <div class="grp" role="group" aria-label="上色">
-        <span class="lab">上色</span>
-        <button class="btn on" data-color="layer">層次</button><button class="btn" data-color="natural">肌肉色</button>
-      </div>
-      <div class="grp" role="group" aria-label="顯示">
-        <button class="btn" id="bones">骨骼</button><button class="btn" id="bonesOnly">只看骨骼</button>
-        <button class="btn" data-side="R">右半</button><button class="btn" data-side="L">左半</button><button class="btn on" data-side="">雙側</button>
-      </div>
-      <div class="grp"><span class="lab">分離</span><input id="explode" type="range" min="0" max="100" value="0" aria-label="分離程度"></div>
-      <div class="grp" role="group" aria-label="主題">
-        <span class="lab">主題</span>
-        <button class="btn" data-theme-set="auto">自動</button><button class="btn" data-theme-set="light">淺色</button><button class="btn" data-theme-set="dark">深色</button>
-      </div>
-      <div class="grp" role="group" aria-label="筋膜、滑液囊、腱鞘">
-        <span class="lab">結締組織</span>
-        <button class="btn" data-ct="0">筋膜</button><button class="btn" data-ct="1">滑液囊</button><button class="btn" data-ct="2">腱鞘</button>
-      </div>
-      <div class="grp" role="group" aria-label="神經與淋巴">
-        <span class="lab">系統</span>
-        <button class="btn" data-sys="n">神經</button><button class="btn" data-sys="l">淋巴</button>
-      </div>
-      <div class="grp" role="group" aria-label="模型精細度">
-        <span class="lab">模型</span>
-        <button class="btn on" data-q="std">標準</button><button class="btn" data-q="hd" id="hdBtn">精細</button>
-      </div>
-      <div class="grp ver" role="group" aria-label="版本">
+      <h5 class="sec-h" data-sec="settings">關於</h5>
+      <div class="grp ver" role="group" aria-label="版本" data-sec="settings">
         <span class="lab">版本</span>
         <span class="vtxt" id="verTxt">網頁 __VERSION__</span>
-        <button class="btn" id="verCheck">檢查更新</button>
+        <span class="vbtns"><button class="btn" id="verCheck">檢查更新</button><button class="btn" id="apkBtn" hidden>更新 App</button></span>
       </div>
-      <div class="grp" role="group" aria-label="工具">
+      <p class="about" data-sec="settings">模型：Z-Anatomy（CC BY-SA 4.0），源自 BodyParts3D © DBCLS。僅供學習與繪畫參考，非醫療用途。</p>
+
+      <div class="grp desk-only" role="group" aria-label="工具" data-sec="tools">
         <span class="lab">工具</span>
         <button class="btn" data-tool="pick">動作查詢</button><button class="btn" data-tool="pose">擺姿勢</button><button class="btn" data-tool="quiz">測驗</button>
       </div>
     </div>
     <div class="legend">
       <div class="t"><span>層次（點選開關）</span><span>1 = 最淺</span></div>
-      <div class="chips" id="chips"></div>
+      <span class="io">外</span><div class="chips" id="chips"></div><span class="io">內</span>
       <div class="peel">
         <button class="btn" id="peel">剝<span class="long">掉最外</span>一層</button>
         <button class="btn" id="unpeel">放回<span class="long">一層</span></button>
@@ -307,14 +351,22 @@ footer.credit a { color: inherit; }
         <li><b>點一下</b>肌肉：看名稱、層次、誰蓋住它。</li>
         <li>選好肌肉後按 <b>▶</b>，模型會做出這塊肌肉負責的動作；紅色、藍色標記是它的起點和止點。</li>
         <li>「動作查詢」：選一個動作，看哪些肌肉負責；「擺姿勢」：自己調整每個關節的角度。</li>
-        <li><b>按兩下</b>肌肉：把它拆下來，看底下是什麼。</li>
+        <li>想看底下的肌肉：在資訊卡按「隱藏」，或用左下角的層次一層一層剝開。</li>
         <li>左下角的層次按鈕可以一層一層剝開。</li>
         <li>「只看相鄰」會把上面那層變半透明，下面那層實心顯示。</li>
       </ul>
     </div>
     <div class="card" id="card" hidden></div>
     <div class="update" id="upd" hidden></div>
+    <div class="toast" id="toast" hidden></div>
     <div class="scrim" id="scrim" hidden></div>
+    <nav class="tabs" aria-label="主要功能">
+      <button data-tab="model" class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M7 9l5 2 5-2M9 21l3-7 3 7"/></svg>模型</button>
+      <button data-tab="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg>搜尋</button>
+      <button data-tab="pick"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>動作</button>
+      <button data-tab="pose"><svg viewBox="0 0 24 24"><circle cx="13" cy="4.5" r="2"/><path d="m9 21 2-6 3 2v4M7 12l3-4h4l3 3M11 8l1 7"/></svg>姿勢</button>
+      <button data-tab="quiz"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.5V14M12 17.5v.01"/></svg>測驗</button>
+    </nav>
   </main>
 </div>
 
@@ -530,7 +582,8 @@ footer.credit a { color: inherit; }
       if (inv && inv.has(i)) vis = true;
       if (i === st.sel) vis = true;
       mesh.visible = vis;
-      const ghost = (rel && above.has(i)) || (inv && !inv.has(i));
+      // 被點選的肌肉永遠實心顯示（動作查詢時其他肌肉才變透明）
+      const ghost = i !== st.sel && ((rel && above.has(i)) || (inv && !inv.has(i)));
       mat.transparent = !!ghost; mat.opacity = ghost ? (inv ? 0.08 : 0.28) : 1; mat.depthWrite = !ghost;
       const role = inv && inv.has(i) ? (inv.get(i) ? 'p' : 'a') : '';
       mat.color.set(i === st.sel ? '#5fb3d9' : role === 'p' ? '#ff8f8f' : role === 'a' ? '#ffd28a' : '#ffffff');
@@ -798,7 +851,7 @@ footer.credit a { color: inherit; }
     applyCardH();
   }
   addEventListener('resize', () => applyCardH());
-  function renderCard() { renderCardInner(); decorateCard(); }
+  function renderCard() { renderCardInner(); decorateCard(); try { updateTabs(); } catch (e) {} }
   function renderCardInner() {
     const card = $('#card');
     const mode = st.mode === 'quiz' ? 'quiz' : st.sel >= 0 ? 'muscle' : st.ct >= 0 ? 'ct' : st.bone >= 0 ? 'bone' : st.sys >= 0 ? 'sys' : st.mode === 'pick' ? 'pick' : st.act ? 'action' : st.mode === 'pose' ? 'pose' : null;
@@ -829,7 +882,7 @@ footer.credit a { color: inherit; }
         <div class="acts">
           <button class="btn ${st.att ? 'on' : ''}" id="ca" aria-pressed="${st.att}">起止點</button>
           <button class="btn ${st.focus ? 'on' : ''}" id="cf">只看相鄰</button>
-          <button class="btn" id="cr">拆下這塊</button>
+          <button class="btn" id="cr">隱藏</button>
           <button class="btn" id="cz">鏡頭對準</button>
         </div>
       </div>
@@ -1024,6 +1077,14 @@ footer.credit a { color: inherit; }
     st.removed.add(i); lastRemoved.push(i);
     if (st.sel === i) { st.sel = -1; st.focus = false; renderCard(); }
     apply();
+    toast(`已隱藏 ${label(MU[i])}`, '復原', () => { st.removed.delete(i); const k = lastRemoved.lastIndexOf(i); if (k >= 0) lastRemoved.splice(k, 1); apply(); });
+  }
+  let toastTimer = 0;
+  function toast(msg, actLabel, act) {
+    const t = $('#toast');
+    t.innerHTML = ''; const sp = document.createElement('span'); sp.textContent = msg; t.appendChild(sp);
+    if (actLabel) { const b = document.createElement('button'); b.textContent = actLabel; b.onclick = () => { t.hidden = true; act(); }; t.appendChild(b); }
+    t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 6000);
   }
 
   // ---------- camera
@@ -1054,7 +1115,7 @@ footer.credit a { color: inherit; }
   };
   const viewTarget = () => new THREE.Vector3(0, innerWidth <= 820 ? 0.86 : 0.9, 0);
   document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => {
-    const t = viewTarget(); tween(t.clone().addScaledVector(new THREE.Vector3(...VIEWS[b.dataset.view]), fitDist()), t);
+    goView(b.dataset.view);
   });
 
   // ---------- toolbar
@@ -1095,7 +1156,6 @@ footer.credit a { color: inherit; }
     if (i >= 300000) { selectSys(i - 300000, false); lastIdx = -2; return; }
     if (i >= 200000) { selectBone(i - 200000, false); lastIdx = -2; return; }
     if (i >= 100000) { selectCT(i - 100000, false); lastIdx = -2; return; }
-    if (i >= 0 && i === lastIdx && now - lastTap < 350) { removeMuscle(i); lastIdx = -2; return; }
     lastTap = now; lastIdx = i;
     if (i >= 0) select(i, false); else if (st.ct >= 0) selectCT(-1); else if (st.bone >= 0) selectBone(-1); else if (st.sys >= 0) selectSys(-1); else if (st.sel >= 0 && !st.focus) select(-1);
   });
@@ -1601,10 +1661,45 @@ footer.credit a { color: inherit; }
   try { if (localStorage.getItem('atlas-quality') === 'hd') setTimeout(loadHD, 300); } catch (e) {}
 
   // ---------- mobile sheets
-  function closeSheets() { $('#toolbar').classList.remove('open'); $('#index').classList.remove('open'); $('#scrim').hidden = true; }
-  function openSheet(el) { closeSheets(); el.classList.add('open'); $('#scrim').hidden = false; }
-  $('#mList').onclick = () => { openSheet($('#index')); renderList(); };
-  $('#mOpts').onclick = () => openSheet($('#toolbar'));
+  function closeSheets() { $('#toolbar').classList.remove('open'); $('#index').classList.remove('open'); $('#scrim').hidden = true; updateTabs(); }
+  function openSheet(el, sec) {
+    const same = el.classList.contains('open') && (!sec || el.dataset.sec === sec);
+    closeSheets();
+    if (same) return;
+    if (sec) { el.dataset.sec = sec; $('#sheetTitle').textContent = sec === 'layers' ? '圖層' : '設定'; }
+    el.classList.add('open'); $('#scrim').hidden = false; updateTabs();
+  }
+  $('#mLayers').onclick = () => openSheet($('#toolbar'), 'layers');
+  $('#mOpts').onclick = () => openSheet($('#toolbar'), 'settings');
+  // 底部分頁：模型／搜尋／動作／姿勢／測驗
+  function updateTabs() {
+    const searchOpen = $('#index').classList.contains('open');
+    const cur = searchOpen ? 'search' : st.mode === 'quiz' ? 'quiz' : st.mode === 'pose' ? 'pose' : (st.mode === 'pick' || st.act) ? 'pick' : 'model';
+    document.querySelectorAll('[data-tab]').forEach(b => { const on = b.dataset.tab === cur; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'page' : 'false'); });
+  }
+  function leaveTools() {
+    if (st.act) { st.act = null; stopAction(true); }
+    if (st.mode === 'quiz') endQuiz();
+    st.mode = null;
+  }
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
+    const t = b.dataset.tab;
+    if (t === 'model') { closeSheets(); leaveTools(); apply(); renderCard(); return; }
+    if (t === 'search') {
+      if ($('#index').classList.contains('open')) { closeSheets(); return; }
+      openSheet($('#index')); renderList(); setTimeout(() => { try { $('#q').focus({ preventScroll: true }); } catch (e) {} }, 50); return;
+    }
+    closeSheets();
+    const already = (t === 'pick' && (st.mode === 'pick' || st.act)) || st.mode === t;
+    if (already) { leaveTools(); apply(); renderCard(); return; }
+    openTool(t);
+  });
+  // 浮動視角按鈕：回正、轉向（前→右→後→左）
+  const TURN = ['front', 'right', 'back', 'left'];
+  let turnIdx = 0;
+  function goView(name) { const t = viewTarget(); tween(t.clone().addScaledVector(new THREE.Vector3(...VIEWS[name]), fitDist() / Math.sqrt(viewShift().vis)), t); }
+  $('#fabHome').onclick = () => { turnIdx = 0; goView('front'); };
+  $('#fabTurn').onclick = () => { turnIdx = (turnIdx + 1) % 4; goView(TURN[turnIdx]); };
   $('#scrim').onclick = closeSheets;
   document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => openTool(b.dataset.tool));
   // ---------- 鎖定視角：鏡頭只聽手指／滑鼠，按鈕不會自動轉正或拉近
@@ -1641,9 +1736,6 @@ footer.credit a { color: inherit; }
     const cs = getComputedStyle(root);
     paintBones();
     syncBars();
-    const lbl = { auto: '自動', light: '淺色', dark: '深色' }[pref];
-    $('#mTheme').setAttribute('aria-label', '主題：' + lbl);
-    $('#mTheme').title = '主題：' + lbl;
   }
   // Android App：狀態列和導覽列的底色、圖示深淺跟著主題走
   function syncBars() {
@@ -1657,14 +1749,10 @@ footer.credit a { color: inherit; }
   }
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (themePref === 'auto') syncBars(); }); } catch (e) {}
   document.querySelectorAll('[data-theme-set]').forEach(b => b.onclick = () => applyTheme(b.dataset.themeSet, true));
-  $('#mTheme').onclick = () => {
-    const dark = getComputedStyle(root).getPropertyValue('--bg').trim().toLowerCase() === '#17131a';
-    applyTheme(dark ? 'light' : 'dark', true);
-  };
   applyTheme(themePref, false);
 
   // ---------- Android App：App 外殼太舊時提醒重新安裝（網頁內容本身會自動更新）
-  const LATEST_APK = '1.4';
+  const LATEST_APK = '1.5';
   const APK_URL = 'https://esono1.github.io/salary-calc/anatomy/muscle-atlas.apk';
   const verLess = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
   try {
@@ -1672,13 +1760,33 @@ footer.credit a { color: inherit; }
     if (bridge && typeof bridge.appVersion === 'function') {
       const v = String(bridge.appVersion());
       if (/^[\d.]+$/.test(v) && verLess(v, LATEST_APK)) {
+        const inApp = typeof bridge.installUpdate === 'function';
         const u = $('#upd');
-        u.innerHTML = `App 有新版 ${LATEST_APK}（目前 ${v}）<a href="${APK_URL}">下載安裝</a><button aria-label="關閉">✕</button>`;
+        u.innerHTML = `App 有新版 ${LATEST_APK}（目前 ${v}）<a href="${APK_URL}" data-apk>${inApp ? '更新' : '下載安裝'}</a><button aria-label="關閉">✕</button>`;
         u.querySelector('button').onclick = () => { u.hidden = true; };
+        if (inApp) u.querySelector('[data-apk]').onclick = e => { e.preventDefault(); startApkUpdate(); };
         u.hidden = false;
+        const ab = $('#apkBtn'); ab.hidden = false; ab.textContent = `更新 App 到 ${LATEST_APK}`;
+        ab.onclick = () => inApp ? startApkUpdate() : (location.href = APK_URL);
       }
     }
   } catch (e) {}
+
+  // App 內更新：App 下載 APK，回報進度，最後跳出系統的安裝確認
+  function startApkUpdate() {
+    try { AndroidBridge.installUpdate(APK_URL); apkMsg('準備下載…'); } catch (e) { location.href = APK_URL; }
+  }
+  function apkMsg(t) { const u = $('#upd'); u.className = 'update info'; u.textContent = t; u.hidden = false; const ab = $('#apkBtn'); if (ab) ab.textContent = t; }
+  window.__apkStatus = (kind, val) => {
+    if (kind === 'progress') apkMsg(val >= 0 ? `下載新版 App… ${val}%` : '下載新版 App…');
+    else if (kind === 'confirm') apkMsg('下載完成，請在系統視窗按「安裝」');
+    else if (kind === 'perm') apkMsg('請在設定中允許「安裝不明應用程式」，再回到 App，會自動繼續');
+    else if (kind === 'error') {
+      const u = $('#upd'); u.className = 'update';
+      u.innerHTML = `更新失敗（${String(val || '').slice(0, 60)}）<a href="${APK_URL}">改用瀏覽器下載</a><button aria-label="關閉">✕</button>`;
+      u.querySelector('button').onclick = () => { u.hidden = true; }; u.hidden = false;
+    }
+  };
 
   // ---------- 版本與更新：顯示目前版本，打開或切回 App 時檢查網站上有沒有新版
   const PAGE_VERSION = '__VERSION__';
@@ -1736,8 +1844,13 @@ footer.credit a { color: inherit; }
   let lastOff = '';
   function viewShift() {
     const w = canvas.clientWidth, h = canvas.clientHeight, card = $('#card');
-    if (!card || card.hidden || st.lock) return { x: 0, y: 0, vis: 1 };
-    if (innerWidth <= 820) { const ch = card.offsetHeight, top = 56; return { x: 0, y: (ch - top) / 2, vis: Math.max(0.35, (h - ch - top) / h) }; }
+    if (st.lock) return { x: 0, y: 0, vis: 1 };
+    if (!card || card.hidden) {
+      // 手機：上方列和底部分頁列會擋住一部分畫面，把中心往上移一點
+      if (innerWidth <= 820) { const tb = $('.tabs').offsetHeight || 0, top = 56; return { x: 0, y: (tb + 60 - top) / 2, vis: Math.max(0.5, (h - tb - 60 - top) / h) }; }
+      return { x: 0, y: 0, vis: 1 };
+    }
+    if (innerWidth <= 820) { const tb = $('.tabs').offsetHeight || 0, ch = card.offsetHeight, top = 56; return { x: 0, y: (ch + tb - top) / 2, vis: Math.max(0.3, (h - ch - tb - top) / h) }; }
     return { x: (card.offsetWidth + 12) / 2, y: 0, vis: 1 };
   }
   function resize() {
@@ -1752,7 +1865,7 @@ footer.credit a { color: inherit; }
   }
   function loop(now) { resize(); if (anim) anim(now); tickAction(now); controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
   paint(); apply(); renderCard();
-  { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist()); }
+  { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist() / Math.sqrt(viewShift().vis)); }
   requestAnimationFrame(loop);
   window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved, setBulge, selectCT, CTM, selectBone, selectSys, SYS, BONEN, stretched };
 })();
