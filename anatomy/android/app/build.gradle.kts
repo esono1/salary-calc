@@ -10,8 +10,8 @@ android {
         applicationId = "tw.anatomy.atlas"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
     }
 
     // 固定的簽章檔：每次打包出來的 APK 簽章都一樣，新版才能直接覆蓋安裝舊版。
@@ -40,6 +40,10 @@ android {
         getByName("main") {
             assets.srcDirs("../../app")
         }
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     compileOptions {

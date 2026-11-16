@@ -8,16 +8,35 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.WindowInsets;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-/** 用內建瀏覽器元件顯示 assets/index.html（整個肌肉圖譜都在這一個檔案裡，不需要網路）。 */
+/**
+ * 肌肉圖譜 App。
+ * 打開時讀網站上的最新版（網頁內容改了，App 就自動更新）；網頁讀過一次後會存在手機裡，之後沒網路也能用。
+ * 第一次打開就沒網路時，改用 APK 內建的那一份。
+ */
 public class MainActivity extends Activity {
-    private WebView web;
+    private static final String ONLINE = "https://esono1.github.io/salary-calc/anatomy/app/";
+    private static final String ONLINE_HOST = "esono1.github.io";
+    private static final String ONLINE_PATH = "/salary-calc/anatomy/app/";
+    private static final String BUILT_IN = "file:///android_asset/index.html";
 
-    @SuppressLint("SetJavaScriptEnabled")
+    private WebView web;
+    private boolean usingBuiltIn = false;
+
+    /** 給網頁讀 App 版本，用來判斷要不要提醒重新安裝 */
+    public static class Bridge {
+        @JavascriptInterface
+        public String appVersion() { return BuildConfig.VERSION_NAME; }
+    }
+
+    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -28,15 +47,27 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(true);
         s.setBuiltInZoomControls(false);
         s.setSupportZoom(false);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        web.addJavascriptInterface(new Bridge(), "AndroidBridge");
 
-        // 連結（例如模型來源）用手機的瀏覽器開，不在 App 裡開
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri u = request.getUrl();
-                if ("file".equals(u.getScheme())) return false;
+                if (isAppPage(u)) return false;
+                // 其他連結（模型來源、下載新版 APK）交給手機的瀏覽器
                 try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception ignored) { }
                 return true;
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request.isForMainFrame()) fallBack();
+            }
+
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse response) {
+                if (request.isForMainFrame() && response.getStatusCode() >= 400) fallBack();
             }
         });
 
@@ -54,7 +85,19 @@ public class MainActivity extends Activity {
 
         setContentView(web);
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
-        else web.loadUrl("file:///android_asset/index.html");
+        else web.loadUrl(ONLINE);
+    }
+
+    private static boolean isAppPage(Uri u) {
+        if ("file".equals(u.getScheme())) return true;
+        String path = u.getPath() == null ? "" : u.getPath();
+        return "https".equals(u.getScheme()) && ONLINE_HOST.equals(u.getHost()) && path.startsWith(ONLINE_PATH);
+    }
+
+    private void fallBack() {
+        if (usingBuiltIn) return;
+        usingBuiltIn = true;
+        web.loadUrl(BUILT_IN);
     }
 
     @Override
