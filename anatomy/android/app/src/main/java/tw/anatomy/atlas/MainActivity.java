@@ -44,6 +44,10 @@ public class MainActivity extends Activity {
         public String appVersion() { return BuildConfig.VERSION_NAME; }
 
         /** 網頁切換深淺色時，讓狀態列、導覽列跟著換底色和圖示顏色 */
+        /** 網頁按「改用線上版」時，重新讀網站 */
+        @JavascriptInterface
+        public void retryOnline() { runOnUiThread(MainActivity.this::loadOnline); }
+
         @JavascriptInterface
         public void setBarColors(String hex, boolean dark) {
             runOnUiThread(() -> applyBarColors(hex, dark));
@@ -98,12 +102,12 @@ public class MainActivity extends Activity {
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) fallBack();
+                if (request.isForMainFrame()) fallBack("錯誤 " + error.getErrorCode() + " " + error.getDescription());
             }
 
             @Override
             public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse response) {
-                if (request.isForMainFrame() && response.getStatusCode() >= 400) fallBack();
+                if (request.isForMainFrame() && response.getStatusCode() >= 400) fallBack("HTTP " + response.getStatusCode());
             }
         });
 
@@ -126,7 +130,19 @@ public class MainActivity extends Activity {
 
         setContentView(frame);
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
-        else web.loadUrl(ONLINE);
+        else loadOnline();
+    }
+
+    private void loadOnline() {
+        usingBuiltIn = false;
+        web.loadUrl(ONLINE);
+    }
+
+    /** 從背景切回來時，如果正在用離線備份，就再試一次線上版 */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (usingBuiltIn && web != null) loadOnline();
     }
 
     private static boolean isAppPage(Uri u) {
@@ -135,10 +151,11 @@ public class MainActivity extends Activity {
         return "https".equals(u.getScheme()) && ONLINE_HOST.equals(u.getHost()) && path.startsWith(ONLINE_PATH);
     }
 
-    private void fallBack() {
+    /** 讀不到網站時改用 APK 內建的網頁，並把原因帶給網頁顯示 */
+    private void fallBack(String why) {
         if (usingBuiltIn) return;
         usingBuiltIn = true;
-        web.loadUrl(BUILT_IN);
+        web.loadUrl(BUILT_IN + "#offline=" + Uri.encode(why == null ? "" : why));
     }
 
     @Override
