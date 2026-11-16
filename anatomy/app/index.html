@@ -358,7 +358,7 @@ footer.credit a { color: inherit; }
       <h5 class="sec-h" data-sec="settings">關於</h5>
       <div class="grp ver" role="group" aria-label="版本" data-sec="settings">
         <span class="lab">版本</span>
-        <span class="vtxt" id="verTxt">網頁 2026.11.17-0544</span>
+        <span class="vtxt" id="verTxt">網頁 2026.11.17-0549</span>
         <span class="vbtns"><button class="btn" id="verCheck">檢查更新</button><button class="btn" id="apkBtn" hidden>更新 App</button></span>
       </div>
       <p class="about" data-sec="settings">模型：Z-Anatomy（CC BY-SA 4.0），源自 BodyParts3D © DBCLS。僅供學習與繪畫參考，非醫療用途。</p>
@@ -1544,7 +1544,7 @@ footer.credit a { color: inherit; }
     // 刪掉快取裡舊版本的模型資料，避免手機空間越用越多
     try {
       var keep = files.concat(["d/19bfa7e8f7-meta.js"]);
-      caches.keys().then(function (ks) { ks.forEach(function (n) { caches.open(n).then(function (c) { c.keys().then(function (rs) { rs.forEach(function (r) { var m = //(d/[^/?]+.js)/.exec(r.url); if (m && keep.indexOf(m[1]) < 0) c.delete(r); }); }); }); }); });
+      caches.keys().then(function (ks) { ks.forEach(function (n) { caches.open(n).then(function (c) { c.keys().then(function (rs) { rs.forEach(function (r) { var k = r.url.indexOf('/d/'); if (k < 0) return; var f = r.url.slice(k + 1).split('?')[0]; if (keep.indexOf(f) < 0) c.delete(r); }); }); }); }); });
     } catch (e) {}
   })();
 })();
@@ -3053,7 +3053,7 @@ footer.credit a { color: inherit; }
   };
 
   // ---------- 版本與更新：顯示目前版本，打開或切回 App 時檢查網站上有沒有新版
-  const PAGE_VERSION = '2026.11.17-0544';
+  const PAGE_VERSION = '2026.11.17-0549';
   let appVer = '';
   try { if (window.AndroidBridge && typeof AndroidBridge.appVersion === 'function') appVer = String(AndroidBridge.appVersion()); } catch (e) {}
   const OFFLINE = location.protocol === 'file:';

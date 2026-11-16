@@ -52,7 +52,7 @@ const GEO_CHUNKS = (() => {
     // 刪掉快取裡舊版本的模型資料，避免手機空間越用越多
     try {
       var keep = files.concat([${JSON.stringify(metaFile)}]);
-      caches.keys().then(function (ks) { ks.forEach(function (n) { caches.open(n).then(function (c) { c.keys().then(function (rs) { rs.forEach(function (r) { var m = /\/(d\/[^\/?]+\.js)/.exec(r.url); if (m && keep.indexOf(m[1]) < 0) c.delete(r); }); }); }); }); });
+      caches.keys().then(function (ks) { ks.forEach(function (n) { caches.open(n).then(function (c) { c.keys().then(function (rs) { rs.forEach(function (r) { var k = r.url.indexOf('/d/'); if (k < 0) return; var f = r.url.slice(k + 1).split('?')[0]; if (keep.indexOf(f) < 0) c.delete(r); }); }); }); }); });
     } catch (e) {}
   })();
 })();
@@ -69,3 +69,17 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) naviga
 fs.writeFileSync(OUT + '/index.html', t);
 fs.writeFileSync(OUT + '/version.json', JSON.stringify({ v: VERSION }) + '\n');
 console.log('index.html', fs.statSync(OUT + '/index.html').size, 'version', VERSION, 'data files', fs.readdirSync(OUT + '/d').length);
+
+// 安全檢查：網頁裡每一段程式都要能被解析，有語法錯誤就中止（避免發布壞掉的網頁）
+{
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  const html = fs.readFileSync(OUT + '/index.html', 'utf8');
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+  for (const [i, src] of scripts.entries()) {
+    try { new AsyncFunction(src); } catch (e) { console.error(`第 ${i + 1} 段程式有語法錯誤：${e.message}`); process.exit(1); }
+  }
+  for (const f of fs.readdirSync(OUT + '/d')) {
+    try { new Function(fs.readFileSync(OUT + '/d/' + f, 'utf8')); } catch (e) { console.error(`${f} 有語法錯誤：${e.message}`); process.exit(1); }
+  }
+  console.log('語法檢查通過：', scripts.length, '段程式、', fs.readdirSync(OUT + '/d').length, '個資料檔');
+}
