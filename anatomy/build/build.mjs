@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
 import { manifest, decodeChunk, R } from './decode.mjs';
 import { ZH, REGIONS, REGION_ORDER } from './zh.mjs';
-import { buildSkeleton, muscleWeights } from './rig.mjs';
+import { buildSkeleton, muscleWeights, segmentOf, SEGMENTS } from './rig.mjs';
+import { buildAttachments } from './attach.mjs';
 import { functionOf } from './func.mjs';
 
 const QUALITY = process.env.Q || 'economy';
@@ -29,6 +30,7 @@ async function loadSystem(sys, q) {
 await loadSystem('muscular', QUALITY);
 await loadSystem('skeletal', 'economy');
 await loadSystem('regions', 'economy');
+await loadSystem('insertions', 'economy');
 
 function weld(g, flagFn) {
   const map = new Map(), pos = [], flag = [], idx = new Uint32Array(g.idx.length);
@@ -112,6 +114,9 @@ console.log('pivots', JSON.stringify(RIG.skel.map(b => [b.name, b.pivot])));
   M.forEach(m => { m.w = muscleWeights(m.g, RIG.segBVH); });
   console.log('weights', ((Date.now() - t0) / 1000).toFixed(1) + 's');
 }
+const SEGI = new Map(SEGMENTS.map((x, i) => [x[0], i]));
+const ATT = buildAttachments({ manifest, en, meshes, M, boneStructs: boneParts, segIndexOf: (n, sd) => SEGI.get(segmentOf(n, sd)), weld });
+console.log('attachments', ATT.patches.length, 'tris', ATT.patches.reduce((a, p) => a + p.g.idx.length / 3, 0));
 console.log('skin tris', skin.idx.length / 3, 'bone tris', bone.idx.length / 3, 'bone verts', bone.pos.length / 3);
 
 function bvhOf(g) {
@@ -225,7 +230,7 @@ const bb = new THREE.Box3();
 for (let i = 0; i < allM.pos.length; i += 3) bb.expandByPoint(p.fromArray(allM.pos, i));
 for (let i = 0; i < bone.pos.length; i += 3) bb.expandByPoint(p.fromArray(bone.pos, i));
 const min = bb.min.toArray(), size = bb.getSize(new THREE.Vector3()).toArray();
-const q = (pos) => { const o = new Uint16Array(pos.length); for (let i = 0; i < pos.length; i++) o[i] = Math.round((pos[i] - min[i % 3]) / size[i % 3] * 65535); return o; };
+const q = (pos) => { const o = new Uint16Array(pos.length); for (let i = 0; i < pos.length; i++) o[i] = Math.max(0, Math.min(65535, Math.round((pos[i] - min[i % 3]) / size[i % 3] * 65535))); return o; };
 const chunks = []; let off = 0;
 const push = (ta) => { const buf = Buffer.from(ta.buffer, ta.byteOffset, ta.byteLength); const o = off; chunks.push(buf); off += buf.length; if (off % 4) { const pad = 4 - off % 4; chunks.push(Buffer.alloc(pad)); off += pad; } return o; };
 const meta = {
@@ -233,7 +238,7 @@ const meta = {
   attribution: 'Z-Anatomy (CC BY-SA 4.0), based on BodyParts3D © DBCLS; glTF conversion by Svitylo 3D Anatomy Atlas data 1.2.0',
   muscles: M.map(m => ({
     id: m.id.replace('muscular.', ''), zh: m.zh, en: m.en, la: m.la, side: m.side, region: REGION_ORDER.indexOf(m.region), layer: m.layer,
-    exposed: Math.round(m.exposed * 100), a: functionOf(m.en)?.acts || [], fn: functionOf(m.en)?.text || '', o: m.out, fx: m.fixed || 0, sheath: IGN.has(M.indexOf(m)) ? 1 : 0, tendon: m.allTendon ? 1 : 0,
+    exposed: Math.round(m.exposed * 100), a: functionOf(m.en)?.acts || [], org: ATT.summary[M.indexOf(m)].o, ins: ATT.summary[M.indexOf(m)].n, fn: functionOf(m.en)?.text || '', o: m.out, fx: m.fixed || 0, sheath: IGN.has(M.indexOf(m)) ? 1 : 0, tendon: m.allTendon ? 1 : 0,
     cb: m.coveredBy.map(x => [x[0], Math.round(x[1] * 100), Math.round(x[2] * 100)]),
     nv: m.g.pos.length / 3, ni: m.g.idx.length,
     p: push(q(m.g.pos)), i: push(Uint16Array.from(m.g.idx)), f: push(m.g.flag), w: push(m.w),
@@ -241,6 +246,7 @@ const meta = {
 };
 meta.bone = { nv: bone.pos.length / 3, ni: bone.idx.length, p: push(q(bone.pos)), i: push(bone.idx), s: push(bone.seg) };
 meta.skel = RIG.skel;
+meta.att = ATT.patches.map(pt => ({ m: pt.mus, t: pt.type, s: pt.seg, nv: pt.g.pos.length / 3, ni: pt.g.idx.length, p: push(q(pt.g.pos)), i: push(Uint16Array.from(pt.g.idx)) }));
 const bin = Buffer.concat(chunks);
 fs.writeFileSync(OUT + '/body.bin', zlib.gzipSync(bin, { level: 9 }));
 fs.writeFileSync(OUT + '/meta.json', JSON.stringify(meta));

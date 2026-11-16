@@ -102,6 +102,28 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 .move.on .ic { background: #fff; color: var(--accent); }
 .move:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .card .fn { margin: 0; font-size: 13px; line-height: 1.7; }
+.card .fn.att b { font-weight: 700; }
+.card .fn.muted { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.pin { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.pin.o { background: #e5484d; } .pin.i { background: #2f7de1; }
+.pin.p { background: #e25563; margin-left: 4px; } .pin.a { background: #e8a33a; margin-left: 4px; }
+.back { display: block; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12px; padding: 0 0 6px; cursor: pointer; }
+.back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg { display: inline-flex; align-items: center; gap: 2px; margin-top: 10px; background: var(--bg); border-radius: 9px; padding: 3px; }
+.seg .lab { font-size: 11px; color: var(--muted); padding: 0 6px; }
+.pick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.pick.presets { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 10px; }
+.pk { border: 1px solid var(--line); background: var(--bg); border-radius: 9px; padding: 7px 10px; text-align: left; cursor: pointer; font: inherit; color: var(--fg); min-width: 0; }
+.pk:hover { border-color: var(--accent); }
+.pk:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pk b { display: block; font-size: 13px; }
+.pk small { display: block; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk.sm { padding: 6px 4px; text-align: center; }
+.pk.sm b { font-size: 12px; font-weight: 500; }
+.sl { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(0, 1fr) 3.2em; gap: 8px; align-items: center; font-size: 12px; padding: 3px 0; }
+.sl span { color: var(--muted); }
+.sl input { width: 100%; accent-color: var(--accent); }
+.sl output { text-align: right; font-variant-numeric: tabular-nums; }
 .card .fn .muted { color: var(--muted); font-size: 12px; }
 .card .acts { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
 .card .acts .btn { border: 1px solid var(--line); background: var(--bg); font-size: 12px; }
@@ -133,7 +155,10 @@ footer.credit a { color: inherit; }
   .app { display: block; height: 100%; }
   main.stage { position: fixed; inset: 0; }
   .mbar { display: flex; position: absolute; z-index: 5; top: calc(8px + env(safe-area-inset-top, 0px)); left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); gap: 6px; align-items: center; }
-  .mbar .ttl { flex: 1; min-width: 0; font-family: var(--font-head); font-size: 16px; font-weight: 700; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 6px var(--stage); }
+  .desk-only { display: none !important; }
+  .mbar .icon-btn { padding: 7px 9px; }
+  .mbar .icon-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .mbar .ttl { visibility: hidden; flex: 1; min-width: 0; font-family: var(--font-head); font-size: 16px; font-weight: 700; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 6px var(--stage); }
   .scrim:not([hidden]) { display: block; position: fixed; inset: 0; background: rgba(20, 10, 15, .35); z-index: 25; }
 
   /* sheets */
@@ -197,6 +222,8 @@ footer.credit a { color: inherit; }
     <div class="mbar">
       <button class="icon-btn" id="mList" aria-label="肌肉清單"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>清單</button>
       <div class="ttl">全身肌肉分層圖譜</div>
+      <button class="icon-btn" data-tool="pick" aria-label="用動作找肌肉"><svg viewBox="0 0 24 24"><path d="M5 12h4l3-7 3 14 3-7h1"/></svg>動作</button>
+      <button class="icon-btn" data-tool="pose" aria-label="擺姿勢"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M7 9l5 2 5-2M9 21l3-7 3 7"/></svg>姿勢</button>
       <button class="icon-btn" id="mTheme" aria-label="切換主題"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
       <button class="icon-btn" id="mOpts" aria-label="顯示設定"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>顯示</button>
     </div>
@@ -220,6 +247,10 @@ footer.credit a { color: inherit; }
         <span class="lab">主題</span>
         <button class="btn" data-theme-set="auto">自動</button><button class="btn" data-theme-set="light">淺色</button><button class="btn" data-theme-set="dark">深色</button>
       </div>
+      <div class="grp desk-only" role="group" aria-label="工具">
+        <span class="lab">工具</span>
+        <button class="btn" data-tool="pick">動作查詢</button><button class="btn" data-tool="pose">擺姿勢</button>
+      </div>
     </div>
     <div class="legend">
       <div class="t"><span>層次（點選開關）</span><span>1 = 最淺</span></div>
@@ -236,7 +267,8 @@ footer.credit a { color: inherit; }
       <ul>
         <li>拖曳旋轉，滾輪或雙指縮放，右鍵或雙指拖曳平移。</li>
         <li><b>點一下</b>肌肉：看名稱、層次、誰蓋住它。</li>
-        <li>選好肌肉後按 <b>▶</b>，模型會做出這塊肌肉負責的動作。</li>
+        <li>選好肌肉後按 <b>▶</b>，模型會做出這塊肌肉負責的動作；紅色、藍色標記是它的起點和止點。</li>
+        <li>「動作查詢」：選一個動作，看哪些肌肉負責；「擺姿勢」：自己調整每個關節的角度。</li>
         <li><b>按兩下</b>肌肉：把它拆下來，看底下是什麼。</li>
         <li>左下角的層次按鈕可以一層一層剝開。</li>
         <li>「只看相鄰」會把上面那層變半透明，下面那層實心顯示。</li>
@@ -348,7 +380,27 @@ footer.credit a { color: inherit; }
   $('#count').textContent = new Set(MU.map(m => m.en)).size + ' 種、' + MU.length;
 
   // ---------- state
-  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0 };
+  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0, mode: null, act: null, att: true, pose: {}, poseVals: {}, poseSide: 'R', pickSide: 'R' };
+
+  // ---------- 起點／止點：骨頭上的附著區塊（紅 = 起點，藍 = 止點），永遠畫在最上層
+  const attMat = [
+    new THREE.MeshBasicMaterial({ color: '#e5484d', depthTest: false, transparent: true, opacity: 0.92, side: THREE.DoubleSide }),
+    new THREE.MeshBasicMaterial({ color: '#2f7de1', depthTest: false, transparent: true, opacity: 0.92, side: THREE.DoubleSide }),
+  ];
+  const attMeshes = (META.att || []).map(a => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(deq(a.p, a.nv), 3));
+    g.setIndex(new THREE.BufferAttribute(new Uint16Array(bytes, a.i, a.ni), 1));
+    const si = new Uint16Array(a.nv * 4), sws = new Float32Array(a.nv * 4);
+    for (let v = 0; v < a.nv; v++) { si[v * 4] = a.s; sws[v * 4] = 1; }
+    g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+    g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
+    const mesh = new THREE.SkinnedMesh(g, attMat[a.t]);
+    mesh.renderOrder = 10; group.add(mesh); skin(mesh); mesh.visible = false;
+    return mesh;
+  });
+  const attOf = MU.map(() => []);
+  (META.att || []).forEach((a, k) => a.m.forEach(i => attOf[i].push(k)));
   const lastRemoved = [];
 
   function paint() {
@@ -367,20 +419,27 @@ footer.credit a { color: inherit; }
   function apply() {
     const rel = st.focus && st.sel >= 0 ? related(st.sel) : null;
     const above = rel ? new Set(MU[st.sel].cb.map(x => x[0])) : null;
+    const inv = st.act && !rel ? involved(st.act.key, st.act.side) : null;
     MU.forEach((m, i) => {
       const mesh = meshes[i], mat = mesh.material;
       let vis = !st.layersOff.has(m.layer) && !st.removed.has(i) && (!st.side || m.side === st.side || !m.side);
       if (rel) vis = rel.has(i) && (!st.side || m.side === st.side || !m.side);
+      if (inv && inv.has(i)) vis = true;
       if (i === st.sel) vis = true;
       mesh.visible = vis;
-      const ghost = rel && above.has(i);
-      mat.transparent = ghost; mat.opacity = ghost ? 0.28 : 1; mat.depthWrite = !ghost;
-      mat.color.set(i === st.sel ? '#5fb3d9' : '#ffffff');
-      mat.emissive.set(i === st.sel ? '#1d6f9a' : '#000000');
-      mat.emissiveIntensity = i === st.sel ? 0.5 : 0;
+      const ghost = (rel && above.has(i)) || (inv && !inv.has(i));
+      mat.transparent = !!ghost; mat.opacity = ghost ? (inv ? 0.08 : 0.28) : 1; mat.depthWrite = !ghost;
+      const role = inv && inv.has(i) ? (inv.get(i) ? 'p' : 'a') : '';
+      mat.color.set(i === st.sel ? '#5fb3d9' : role === 'p' ? '#ff8f8f' : role === 'a' ? '#ffd28a' : '#ffffff');
+      mat.emissive.set(i === st.sel ? '#1d6f9a' : role === 'p' ? '#a01c2c' : role === 'a' ? '#8a5a00' : '#000000');
+      mat.emissiveIntensity = i === st.sel ? 0.5 : role ? 0.45 : 0;
       mesh.renderOrder = ghost ? 2 : 0;
       const k = st.explode * 0.05 * (NL + 1 - m.layer);
       mesh.position.set(m.o[0] * k, m.o[1] * k, m.o[2] * k);
+    });
+    const showAtt = st.sel >= 0 && st.att ? new Set(attOf[st.sel]) : null;
+    attMeshes.forEach((mesh, k) => {
+      mesh.visible = !!(showAtt && showAtt.has(k));
     });
     renderChips(); renderList(); renderRemoved();
   }
@@ -454,13 +513,19 @@ footer.credit a { color: inherit; }
   }
   function renderCard() {
     const card = $('#card');
-    document.body.classList.toggle('card-open', st.sel >= 0);
-    if (st.sel < 0) { card.hidden = true; $('#hint').hidden = false; return; }
+    const mode = st.sel >= 0 ? 'muscle' : st.mode === 'pick' ? 'pick' : st.act ? 'action' : st.mode === 'pose' ? 'pose' : null;
+    document.body.classList.toggle('card-open', !!mode);
+    document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', (b.dataset.tool === 'pick' && (mode === 'pick' || mode === 'action')) || (b.dataset.tool === 'pose' && mode === 'pose')));
+    if (!mode) { card.hidden = true; $('#hint').hidden = false; return; }
     $('#hint').hidden = true; card.hidden = false;
+    if (mode === 'pick') return renderPicker(card);
+    if (mode === 'action') return renderActionCard(card);
+    if (mode === 'pose') return renderPose(card);
     const m = MU[st.sel];
     card.innerHTML = `
       <div class="hd">
         <button class="btn x" id="cx" aria-label="關閉">✕</button>
+        ${st.act ? `<button class="back" id="cback">← 回到「${actLabel(st.act)}」</button>` : ''}
         <h2>${label(m)}</h2>
         <div class="sub">${m.en}${m.la ? '<br><i>' + m.la + '</i>' : ''}</div>
         <div class="stats">
@@ -470,6 +535,7 @@ footer.credit a { color: inherit; }
         </div>
         <div class="moves" id="cmv"></div>
         <div class="acts">
+          <button class="btn ${st.att ? 'on' : ''}" id="ca" aria-pressed="${st.att}">起止點</button>
           <button class="btn ${st.focus ? 'on' : ''}" id="cf">只看相鄰</button>
           <button class="btn" id="cr">拆下這塊</button>
           <button class="btn" id="cz">鏡頭對準</button>
@@ -485,12 +551,19 @@ footer.credit a { color: inherit; }
         b.className = 'move' + (on ? ' on' : '');
         b.innerHTML = `<span class="ic">${on ? '■' : '▶'}</span><span><b>${ACTIONS[k][0]}</b><small>${ACTIONS[k][1]}</small></span>`;
         b.setAttribute('aria-pressed', on);
-        b.onclick = () => startAction(st.sel, k);
+        b.onclick = () => startAction(k, m.side, st.sel);
         mv.appendChild(b);
       });
     }
     const hf = document.createElement('h4'); hf.textContent = '功能'; bd.appendChild(hf);
     bd.insertAdjacentHTML('beforeend', `<p class="fn">${m.fn || '—'}${m.a.length ? '' : '<br><span class="muted">這塊肌肉沒有明顯的關節動作，所以不做擺動示範。</span>'}</p>`);
+    const ha = document.createElement('h4'); ha.textContent = '起點與止點'; bd.appendChild(ha);
+    if (m.org.length || m.ins.length) {
+      bd.insertAdjacentHTML('beforeend', `<p class="fn att">
+        <span class="pin o"></span><b>起點</b>　${m.org.length ? m.org.join('、') : '—'}<br>
+        <span class="pin i"></span><b>止點</b>　${m.ins.length ? m.ins.join('、') : '—'}</p>
+        <p class="fn muted">${st.att ? '模型上紅色是起點、藍色是止點，會透過其他肌肉顯示出來。' : '按上方「起止點」可以在模型上標出附著位置。'}起點通常是收縮時不動的那一端。原始模型只標出長在骨頭上的附著點，附著在筋膜、腱膜或其他肌肉上的部分不會列出，所以有些肌肉的清單不完整。</p>`);
+    } else bd.insertAdjacentHTML('beforeend', '<p class="fn muted">原始模型沒有這塊肌肉的附著點資料。</p>');
     const h1 = document.createElement('h4'); h1.textContent = '被這些肌肉蓋住（在它上面）'; bd.appendChild(h1);
     if (m.cb.length) m.cb.forEach(([o, pc]) => bd.appendChild(relRow(o, pc)));
     else bd.insertAdjacentHTML('beforeend', '<p class="empty">沒有肌肉蓋在它上面，直接位於皮膚與筋膜下方。</p>');
@@ -501,14 +574,17 @@ footer.credit a { color: inherit; }
     if (m.sheath) note += '<br><br>腹直肌前方由腹外斜肌、腹內斜肌的腱膜（腹直肌鞘）包覆。腱膜不是肌腹，所以不算「被肌肉蓋住」。';
     if (m.fx) note += '<br><br>原始模型的斜方肌上部與下部名稱標反了，本頁已依實際位置更正。';
     bd.insertAdjacentHTML('beforeend', `<div class="note">${note}</div>`);
-    card.querySelector('#cx').onclick = () => select(-1);
+    card.querySelector('#cx').onclick = () => { if (st.act) { st.act = null; stopAction(true); } select(-1); };
+    if (st.act) card.querySelector('#cback').onclick = () => select(-1);
+    card.querySelector('#ca').onclick = () => { st.att = !st.att; apply(); renderCard(); };
     card.querySelector('#cf').onclick = () => { st.focus = !st.focus; apply(); renderCard(); };
     card.querySelector('#cr').onclick = () => removeMuscle(st.sel);
     card.querySelector('#cz').onclick = () => frame(st.sel);
   }
 
   function select(i, doFrame) {
-    if (play.key && i !== play.muscle) { play.key = null; play.muscle = -1; poseBones(null); }
+    if (play.key && play.muscle >= 0 && i !== play.muscle) stopAction(true);
+    if (i >= 0 && st.mode === 'pick') st.mode = null;
     st.sel = i;
     if (i < 0) st.focus = false;
     if (i >= 0 && st.removed.has(i)) st.removed.delete(i);
@@ -642,11 +718,12 @@ footer.credit a { color: inherit; }
     sc_pro: ['肩胛前伸', '把肩膀往前推', s => [['scap', 'y', 0, -14 * s]]],
   };
   const SIDED = new Set(['scap', 'arm', 'forearm', 'hand', 'fingers', 'thumb', 'thigh', 'leg', 'foot', 'toes']);
-  const play = { key: null, muscle: -1, t0: 0, back: 0 };
+  const play = { key: null, side: '', muscle: -1, t0: 0 };
   const DEG = Math.PI / 180, qx = new THREE.Quaternion(), qy = new THREE.Quaternion(), qz = new THREE.Quaternion();
   const AX = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
   function poseBones(key, sideLetter, p) {
     const ang = {};
+    for (const n in st.pose) ang[n] = { ...st.pose[n] };
     if (key) {
       const s = sideLetter === 'L' ? 1 : -1, S = sideLetter || 'R';
       for (const [b, ax, from, to] of ACTIONS[key][2](sideLetter ? s : 1)) {
@@ -662,10 +739,10 @@ footer.credit a { color: inherit; }
     }
   }
   const PERIOD = 2600;
-  function startAction(i, key) {
-    if (play.key === key && play.muscle === i) { stopAction(); return; }
-    play.key = key; play.muscle = i; play.t0 = performance.now();
-    frameAction(i, key);
+  function startAction(key, side, muscle = -1) {
+    if (play.key === key && play.side === side && play.muscle === muscle) { stopAction(); return; }
+    play.key = key; play.side = side; play.muscle = muscle; play.t0 = performance.now();
+    frameAction(side, key);
     renderCard();
   }
   // 鏡頭退到能看清整個動作：屈伸從側面看，外展、旋轉從正面看
@@ -674,8 +751,8 @@ footer.credit a { color: inherit; }
     thigh: [-0.3, 2.6], leg: [-0.2, 1.9], foot: [0, 1.0], toes: [0, 0.8],
     lumbar: [0, 0], thorax: [0, 0], neck: [0.05, 0.9], head: [0.05, 0.9], jaw: [0, 0.7],
   };
-  function frameAction(i, key) {
-    const m = MU[i], s = m.side === 'L' ? 1 : -1, S = m.side || 'R';
+  function frameAction(sideLetter, key) {
+    const m = { side: sideLetter }, s = m.side === 'L' ? 1 : -1, S = m.side || 'R';
     const keys = ACTIONS[key][2](m.side ? s : 1);
     const [b, ax] = keys[keys.length - 1];
     const name = SIDED.has(b) ? b + '_' + S : b;
@@ -691,13 +768,185 @@ footer.credit a { color: inherit; }
     const dir = ax === 'x' ? new THREE.Vector3(side * 0.94, 0.08, 0.33) : new THREE.Vector3(side * 0.15, 0.1, 0.98);
     tween(target.clone().addScaledVector(dir.normalize(), d), target);
   }
-  function stopAction() { play.key = null; play.muscle = -1; poseBones(null); renderCard(); }
+  function stopAction(silent) { play.key = null; play.muscle = -1; poseBones(null); if (!silent) renderCard(); }
   function tickAction(now) {
     if (!play.key) return;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const t = ((now - play.t0) % PERIOD) / PERIOD;
     const p = reduce ? 1 : (1 - Math.cos(t * Math.PI * 2)) / 2;
-    poseBones(play.key, MU[play.muscle].side, p);
+    poseBones(play.key, play.side, p);
+  }
+
+  // ---------- 用動作找肌肉
+  const PICK = [
+    ['肩', ['sh_flex', 'sh_ext', 'sh_abd', 'sh_add', 'sh_ir', 'sh_er']],
+    ['肩胛', ['sc_elev', 'sc_dep', 'sc_ret', 'sc_pro']],
+    ['肘與前臂', ['el_flex', 'el_ext', 'pron', 'sup']],
+    ['腕', ['wr_flex', 'wr_ext', 'wr_rad', 'wr_uln']],
+    ['手指與拇指', ['fi_flex', 'fi_ext', 'th_flex', 'th_ext', 'th_abd', 'th_add']],
+    ['髖', ['hip_flex', 'hip_ext', 'hip_abd', 'hip_add', 'hip_ir', 'hip_er']],
+    ['膝', ['kn_flex', 'kn_ext']],
+    ['踝與腳', ['an_dorsi', 'an_plan', 'an_inv', 'an_ev', 'to_flex', 'to_ext']],
+    ['軀幹', ['tr_flex', 'tr_ext', 'tr_lat', 'tr_rot_same']],
+    ['頸', ['nk_flex', 'nk_ext', 'nk_lat', 'nk_rot_same']],
+    ['下顎', ['jw_open', 'jw_close']],
+  ];
+  const BOTH = new Set(['tr_flex', 'tr_ext', 'nk_flex', 'nk_ext', 'jw_open', 'jw_close']);
+  const SIDE_ZH = { L: '左', R: '右' };
+  function actLabel(a) {
+    const k = a.key, n = ACTIONS[k][0];
+    if (BOTH.has(k)) return n;
+    if (/_rot_same$/.test(k)) return n.replace(/（轉向同側）/, '') + '（轉向' + SIDE_ZH[a.side] + '）';
+    if (/^(tr_lat|nk_lat)$/.test(k)) return n + '（往' + SIDE_ZH[a.side] + '）';
+    return SIDE_ZH[a.side] + n;
+  }
+  function pickLabel(k) { return ACTIONS[k][0].replace(/（轉向同側）/, ''); }
+  // Map<muscle index, isPrimary>
+  function involved(key, side) {
+    const out = new Map(), other = side === 'L' ? 'R' : 'L';
+    const rot = /_rot_same$/.test(key) ? key.replace(/_same$/, '') : null;
+    MU.forEach((m, i) => {
+      let k = null;
+      if (rot) { if (m.side === side && m.a.includes(rot + '_same')) k = rot + '_same'; else if (m.side === other && m.a.includes(rot + '_opp')) k = rot + '_opp'; }
+      else if (m.a.includes(key) && (BOTH.has(key) || m.side === side || !m.side)) k = key;
+      if (k) out.set(i, m.a[0] === k);
+    });
+    return out;
+  }
+  function openTool(mode) {
+    closeSheets();
+    if (st.sel >= 0) { st.sel = -1; st.focus = false; }
+    if (play.muscle >= 0) stopAction(true);
+    const wasOpen = st.mode === mode && !st.act;
+    if (st.act) { st.act = null; stopAction(true); }
+    st.mode = wasOpen ? null : mode;
+    apply(); renderCard();
+  }
+  function chooseAction(key) {
+    st.act = { key, side: st.pickSide }; st.mode = null;
+    apply(); startAction(key, BOTH.has(key) ? '' : st.pickSide);
+  }
+  function renderPicker(card) {
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" data-x aria-label="關閉">✕</button>
+        <h2>用動作找肌肉</h2>
+        <div class="sub">選一個動作，負責的肌肉會亮起來並播放動作。</div>
+        <div class="seg" role="group" aria-label="哪一側">
+          <button class="btn ${st.pickSide === 'R' ? 'on' : ''}" data-ps="R">右側</button><button class="btn ${st.pickSide === 'L' ? 'on' : ''}" data-ps="L">左側</button>
+        </div>
+      </div>
+      <div class="bd">${PICK.map(([g, keys]) => `<h4>${g}</h4><div class="pick">${keys.map(k => `<button class="pk" data-k="${k}"><b>${pickLabel(k)}</b><small>${ACTIONS[k][1]}</small></button>`).join('')}</div>`).join('')}</div>`;
+    card.querySelector('[data-x]').onclick = () => { st.mode = null; renderCard(); };
+    card.querySelectorAll('[data-ps]').forEach(b => b.onclick = () => { st.pickSide = b.dataset.ps; renderCard(); });
+    card.querySelectorAll('[data-k]').forEach(b => b.onclick = () => chooseAction(b.dataset.k));
+  }
+  function renderActionCard(card) {
+    const a = st.act, inv = involved(a.key, a.side);
+    const list = [...inv.entries()].map(([i, p]) => ({ i, p })).sort((x, y) => (y.p - x.p) || (MU[x.i].layer - MU[y.i].layer));
+    const on = play.key === a.key && play.muscle < 0;
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" data-x aria-label="關閉">✕</button>
+        <button class="back" data-back>← 選其他動作</button>
+        <h2>${actLabel(a)}</h2>
+        <div class="sub">${ACTIONS[a.key][1]}。<span class="pin p"></span>主要肌肉　<span class="pin a"></span>輔助肌肉，其他肌肉變透明。</div>
+        <div class="moves"><button class="move ${on ? 'on' : ''}" data-play><span class="ic">${on ? '■' : '▶'}</span><span><b>${on ? '停止' : '播放動作'}</b><small>${ACTIONS[a.key][0]}</small></span></button></div>
+      </div>
+      <div class="bd"></div>`;
+    const bd = card.querySelector('.bd');
+    const sec = (title, rows) => {
+      if (!rows.length) return;
+      const h = document.createElement('h4'); h.textContent = title + ' · ' + rows.length; bd.appendChild(h);
+      rows.forEach(({ i }) => {
+        const m = MU[i], b = document.createElement('button'); b.className = 'rel';
+        b.innerHTML = `<span class="dot" style="background:${layerHex(m.layer)}"></span><span class="nm">${label(m)}</span><span class="pc" style="grid-column: span 2">第 ${m.layer} 層</span>`;
+        b.onclick = () => select(i, false);
+        bd.appendChild(b);
+      });
+    };
+    sec('主要肌肉', list.filter(x => x.p)); sec('輔助肌肉', list.filter(x => !x.p));
+    if (!list.length) bd.insertAdjacentHTML('beforeend', '<p class="empty">目前的資料裡沒有對應這個動作的肌肉。</p>');
+    bd.insertAdjacentHTML('beforeend', '<div class="note">「主要」是這塊肌肉最主要的功能；「輔助」是它也會參與、但不是主力的動作。實際上每個動作都由多塊肌肉合作，力量分配會隨姿勢改變。</div>');
+    card.querySelector('[data-x]').onclick = () => { st.act = null; stopAction(true); apply(); renderCard(); };
+    card.querySelector('[data-back]').onclick = () => { st.act = null; stopAction(true); st.mode = 'pick'; apply(); renderCard(); };
+    card.querySelector('[data-play]').onclick = () => startAction(a.key, BOTH.has(a.key) ? '' : a.side);
+  }
+
+  // ---------- 自由擺姿勢（角度以解剖學方向為正）
+  // [軸, 名稱, 最小, 最大, 正負號：數字或 's'（左 +1 右 -1）、'-s']
+  const JOINTS = [
+    ['arm', '肩', true, [['x', '屈曲（往前舉）', -50, 180, -1], ['z', '外展（往側舉）', -20, 170, 's'], ['y', '內旋', -80, 70, '-s']]],
+    ['scap', '肩胛', true, [['z', '上提', -8, 15, 's'], ['y', '後縮', -15, 15, 's']]],
+    ['forearm', '肘與前臂', true, [['x', '屈曲', 0, 145, -1], ['y', '旋前', 0, 85, '-s']]],
+    ['hand', '腕', true, [['x', '屈曲', -70, 80, -1], ['z', '橈偏', -30, 20, 's']]],
+    ['fingers', '手指', true, [['x', '屈曲（握拳）', -20, 90, -1]]],
+    ['thumb', '拇指', true, [['z', '屈曲', -20, 45, '-s'], ['x', '外展', 0, 45, -1]]],
+    ['thigh', '髖', true, [['x', '屈曲（抬腿）', -30, 120, -1], ['z', '外展', -20, 45, 's'], ['y', '內旋', -45, 45, '-s']]],
+    ['leg', '膝', true, [['x', '屈曲', 0, 140, 1]]],
+    ['foot', '踝', true, [['x', '蹠屈（腳尖往下）', -25, 50, 1], ['z', '內翻', -15, 30, '-s']]],
+    ['toes', '腳趾', true, [['x', '屈曲', -40, 35, 1]]],
+    ['trunk', '軀幹', false, [['x', '前屈', -25, 80, 1], ['z', '側彎（往右為正）', -40, 40, 1], ['y', '旋轉（往左為正）', -45, 45, 1]]],
+    ['neckhead', '頸', false, [['x', '低頭', -60, 60, 1], ['z', '側彎（往右為正）', -45, 45, 1], ['y', '轉頭（往左為正）', -80, 80, 1]]],
+    ['jaw', '下顎', false, [['x', '張嘴', 0, 30, 1]]],
+  ];
+  const SPLIT = { trunk: [['lumbar', 0.4], ['thorax', 0.6]], neckhead: [['neck', 0.6], ['head', 0.4]] };
+  function poseToRaw() {
+    const raw = {};
+    for (const [b, , sided, dofs] of JOINTS) {
+      for (const S of sided ? ['L', 'R'] : ['']) {
+        const v = st.poseVals[b + (S ? '_' + S : '')]; if (!v) continue;
+        const s = S === 'L' ? 1 : -1;
+        for (const [ax, , , , sg] of dofs) {
+          if (!v[ax]) continue;
+          const mult = sg === 's' ? s : sg === '-s' ? -s : sg;
+          const targets = SPLIT[b] || [[b + (S ? '_' + S : ''), 1]];
+          for (const [name, f] of targets) (raw[name] ||= { x: 0, y: 0, z: 0 })[ax] += v[ax] * mult * f;
+        }
+      }
+    }
+    st.pose = raw;
+    if (!play.key) poseBones(null);
+  }
+  const both = (b, v) => ({ [b + '_L']: { ...v }, [b + '_R']: { ...v } });
+  const PRESETS = [
+    ['站立', {}],
+    ['雙手上舉', { ...both('arm', { z: 165 }) }],
+    ['手臂平舉', { ...both('arm', { z: 88 }) }],
+    ['坐姿', { ...both('thigh', { x: 90 }), ...both('leg', { x: 90 }), ...both('arm', { x: 20 }), ...both('forearm', { x: 70 }) }],
+    ['跑步', { arm_R: { x: 55 }, forearm_R: { x: 90 }, arm_L: { x: -35 }, forearm_L: { x: 80 }, thigh_L: { x: 65 }, leg_L: { x: 95 }, thigh_R: { x: -20 }, leg_R: { x: 55 }, trunk: { x: 8 } }],
+    ['深蹲', { ...both('thigh', { x: 105, z: 15 }), ...both('leg', { x: 120 }), ...both('foot', { x: -20 }), ...both('arm', { x: 90 }), trunk: { x: 35 } }],
+    ['揮手', { arm_R: { z: 120 }, forearm_R: { x: 60 }, hand_R: { z: 15 } }],
+  ];
+  function renderPose(card) {
+    const S = st.poseSide;
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" data-x aria-label="關閉">✕</button>
+        <h2>擺姿勢</h2>
+        <div class="sub">拖曳滑桿調整關節角度，可以和肌肉動作一起使用。</div>
+        <div class="pick presets">${PRESETS.map((p, k) => `<button class="pk sm" data-pre="${k}"><b>${p[0]}</b></button>`).join('')}</div>
+        <div class="seg" role="group" aria-label="四肢哪一側">
+          <span class="lab">四肢</span><button class="btn ${S === 'R' ? 'on' : ''}" data-ps="R">右側</button><button class="btn ${S === 'L' ? 'on' : ''}" data-ps="L">左側</button>
+        </div>
+      </div>
+      <div class="bd">${JOINTS.map(([b, zh, sided, dofs]) => {
+        const key = b + (sided ? '_' + S : ''), v = st.poseVals[key] || {};
+        return `<h4>${sided ? SIDE_ZH[S] : ''}${zh}</h4>` + dofs.map(([ax, nm, lo, hi]) => `
+          <label class="sl"><span>${nm}</span><input type="range" id="pz-${key}-${ax}" min="${lo}" max="${hi}" step="1" value="${v[ax] || 0}" data-j="${key}" data-ax="${ax}"><output>${v[ax] || 0}°</output></label>`).join('');
+      }).join('')}</div>`;
+    card.querySelector('[data-x]').onclick = () => { st.mode = null; renderCard(); };
+    card.querySelectorAll('[data-ps]').forEach(b => b.onclick = () => { st.poseSide = b.dataset.ps; renderCard(); });
+    card.querySelectorAll('[data-pre]').forEach(b => b.onclick = () => {
+      st.poseVals = JSON.parse(JSON.stringify(PRESETS[+b.dataset.pre][1])); poseToRaw(); renderCard();
+      const t = viewTarget(); t.y -= 0.05;
+      tween(t.clone().addScaledVector(new THREE.Vector3(-0.55, 0.12, 0.83).normalize(), fitDist() / Math.sqrt(viewShift().vis)), t);
+    });
+    card.querySelectorAll('input[data-j]').forEach(inp => inp.oninput = () => {
+      const v = (st.poseVals[inp.dataset.j] ||= {}); v[inp.dataset.ax] = +inp.value;
+      inp.nextElementSibling.textContent = inp.value + '°';
+      poseToRaw();
+    });
   }
 
   // ---------- mobile sheets
@@ -706,6 +955,7 @@ footer.credit a { color: inherit; }
   $('#mList').onclick = () => { openSheet($('#index')); renderList(); };
   $('#mOpts').onclick = () => openSheet($('#toolbar'));
   $('#scrim').onclick = closeSheets;
+  document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => openTool(b.dataset.tool));
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
 
   // ---------- theme (自動 / 淺色 / 深色)
@@ -784,6 +1034,6 @@ footer.credit a { color: inherit; }
   paint(); apply(); renderCard();
   { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist()); }
   requestAnimationFrame(loop);
-  window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS };
+  window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved };
 })();
 </script>
