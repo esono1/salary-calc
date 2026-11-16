@@ -224,6 +224,7 @@ footer.credit a { color: inherit; }
       <div class="ttl">全身肌肉分層圖譜</div>
       <button class="icon-btn" data-tool="pick" aria-label="用動作找肌肉"><svg viewBox="0 0 24 24"><path d="M5 12h4l3-7 3 14 3-7h1"/></svg>動作</button>
       <button class="icon-btn" data-tool="pose" aria-label="擺姿勢"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M7 9l5 2 5-2M9 21l3-7 3 7"/></svg>姿勢</button>
+      <button class="icon-btn" data-lock aria-pressed="false" aria-label="鎖定視角"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path class="shackle" d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
       <button class="icon-btn" id="mTheme" aria-label="切換主題"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
       <button class="icon-btn" id="mOpts" aria-label="顯示設定"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>顯示</button>
     </div>
@@ -233,6 +234,7 @@ footer.credit a { color: inherit; }
       <div class="grp" role="group" aria-label="視角">
         <span class="lab">視角</span>
         <button class="btn" data-view="front">前</button><button class="btn" data-view="back">後</button><button class="btn" data-view="left">左</button><button class="btn" data-view="right">右</button>
+        <button class="btn" data-lock aria-pressed="false" title="鎖定後，按任何按鈕都不會移動鏡頭">鎖定視角</button>
       </div>
       <div class="grp" role="group" aria-label="上色">
         <span class="lab">上色</span>
@@ -246,6 +248,10 @@ footer.credit a { color: inherit; }
       <div class="grp" role="group" aria-label="主題">
         <span class="lab">主題</span>
         <button class="btn" data-theme-set="auto">自動</button><button class="btn" data-theme-set="light">淺色</button><button class="btn" data-theme-set="dark">深色</button>
+      </div>
+      <div class="grp" role="group" aria-label="筋膜、滑液囊、腱鞘">
+        <span class="lab">結締組織</span>
+        <button class="btn" data-ct="0">筋膜</button><button class="btn" data-ct="1">滑液囊</button><button class="btn" data-ct="2">腱鞘</button>
       </div>
       <div class="grp" role="group" aria-label="模型精細度">
         <span class="lab">模型</span>
@@ -280,8 +286,8 @@ footer.credit a { color: inherit; }
     </div>
     <div class="card" id="card" hidden></div>
     <div class="update" id="upd" hidden></div>
+    <div class="scrim" id="scrim" hidden></div>
   </main>
-  <div class="scrim" id="scrim" hidden></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
@@ -384,7 +390,7 @@ footer.credit a { color: inherit; }
   $('#count').textContent = new Set(MU.map(m => m.en)).size + ' 種、' + MU.length;
 
   // ---------- state
-  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0, mode: null, act: null, att: true, pose: {}, poseVals: {}, poseSide: 'R', pickSide: 'R' };
+  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0, ct: -1, ctOn: [false, false, false], mode: null, act: null, att: true, pose: {}, poseVals: {}, poseSide: 'R', pickSide: 'R' };
 
   // ---------- 起點／止點：骨頭上的附著區塊（紅 = 起點，藍 = 止點），永遠畫在最上層
   const attMat = [
@@ -402,6 +408,29 @@ footer.credit a { color: inherit; }
     const mesh = new THREE.SkinnedMesh(g, attMat[a.t]);
     mesh.renderOrder = 10; group.add(mesh); skin(mesh); mesh.visible = false;
     return mesh;
+  });
+  // ---------- 筋膜（0）、滑液囊（1）、腱鞘（2）：半透明，可開關、可點選
+  const CTM = META.ct || [];
+  const CT_COL = ['#efe4d2', '#6fbde3', '#b9a3ec'], CT_OP = [0.4, 0.75, 0.65];
+  const ctMeshes = CTM.map((c, k) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(deq(c.p, c.nv), 3));
+    g.setIndex(new THREE.BufferAttribute(c.u32 ? new Uint32Array(bytes, c.i, c.ni) : new Uint16Array(bytes, c.i, c.ni), 1));
+    g.computeVertexNormals(); g.computeBoundingSphere();
+    const sw = new Uint8Array(bytes, c.w, c.nv * 8), si = new Uint16Array(c.nv * 4), sws = new Float32Array(c.nv * 4);
+    for (let v = 0; v < c.nv; v++) for (let j = 0; j < 4; j++) { si[v * 4 + j] = sw[v * 8 + j]; sws[v * 4 + j] = sw[v * 8 + 4 + j] / 255; }
+    g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+    g.setAttribute('skinWeight', new THREE.BufferAttribute(sws, 4));
+    const mat = new THREE.MeshStandardMaterial({ color: CT_COL[c.k], transparent: true, opacity: CT_OP[c.k], depthWrite: false, side: THREE.DoubleSide, roughness: 0.5 });
+    const mesh = new THREE.SkinnedMesh(g, mat);
+    mesh.renderOrder = 3; mesh.userData.ct = k; group.add(mesh); skin(mesh); mesh.visible = false;
+    c.center = g.boundingSphere.center.clone(); c.radius = g.boundingSphere.radius;
+    return mesh;
+  });
+  const ctGroups = [0, 1, 2].map(kind => {
+    const by = new Map();
+    CTM.forEach((c, k) => { if (c.k === kind) { if (!by.has(c.en)) by.set(c.en, []); by.get(c.en).push(k); } });
+    return [...by.values()].sort((a, b) => CTM[a[0]].zh.localeCompare(CTM[b[0]].zh, 'zh-Hant'));
   });
   const attOf = MU.map(() => []);
   (META.att || []).forEach((a, k) => a.m.forEach(i => attOf[i].push(k)));
@@ -445,6 +474,15 @@ footer.credit a { color: inherit; }
     attMeshes.forEach((mesh, k) => {
       mesh.visible = !!(showAtt && showAtt.has(k));
     });
+    ctMeshes.forEach((mesh, k) => {
+      const c = CTM[k], sel = k === st.ct;
+      mesh.visible = sel || (st.ctOn[c.k] && (!st.side || c.side === st.side || !c.side));
+      mesh.material.color.set(sel ? '#5fb3d9' : CT_COL[c.k]);
+      mesh.material.opacity = sel ? 0.85 : CT_OP[c.k];
+      mesh.material.emissive.set(sel ? '#1d6f9a' : '#000000');
+      mesh.material.emissiveIntensity = sel ? 0.5 : 0;
+    });
+    document.querySelectorAll('[data-ct]').forEach(b => b.classList.toggle('on', st.ctOn[+b.dataset.ct]));
     renderChips(); renderList(); renderRemoved();
   }
 
@@ -548,6 +586,20 @@ footer.credit a { color: inherit; }
         frag.appendChild(b);
       });
     });
+    // 筋膜、滑液囊、腱鞘
+    for (const [kind, title] of [[0, '筋膜與支持帶'], [1, '滑液囊'], [2, '腱鞘']]) {
+      const items = ctGroups[kind].filter(ix => { const c = CTM[ix[0]]; return !q || (c.zh + c.en).toLowerCase().includes(q) || title.includes(q); });
+      if (!items.length) continue;
+      const h = document.createElement('h3'); h.textContent = title + ' · ' + items.length; frag.appendChild(h);
+      items.forEach(ix => {
+        const c = CTM[ix[0]], pickK = ix.find(k => CTM[k].side === (st.side || 'R')) ?? ix[0];
+        const b = document.createElement('button');
+        b.className = 'row' + (ix.includes(st.ct) ? ' on' : '');
+        b.innerHTML = `<span class="dot" style="background:${CT_COL[kind]}"></span><span class="nm"><b>${c.zh}</b><small>${c.en}</small></span><span class="lv">${['筋膜', '滑囊', '腱鞘'][kind]}</span>`;
+        b.onclick = () => { closeSheets(); selectCT(ix.includes(st.ct) && ix.length > 1 ? ix.find(k => k !== st.ct) : pickK, true); };
+        frag.appendChild(b);
+      });
+    }
     const list = $('#list'); const top = list.scrollTop;
     list.innerHTML = ''; list.appendChild(frag); list.scrollTop = top;
     if (!list.children.length) list.innerHTML = '<p class="empty" style="padding:16px">找不到符合的肌肉。試試中文全名或英文名的一部分。</p>';
@@ -565,11 +617,12 @@ footer.credit a { color: inherit; }
   }
   function renderCard() {
     const card = $('#card');
-    const mode = st.sel >= 0 ? 'muscle' : st.mode === 'pick' ? 'pick' : st.act ? 'action' : st.mode === 'pose' ? 'pose' : null;
+    const mode = st.sel >= 0 ? 'muscle' : st.ct >= 0 ? 'ct' : st.mode === 'pick' ? 'pick' : st.act ? 'action' : st.mode === 'pose' ? 'pose' : null;
     document.body.classList.toggle('card-open', !!mode);
     document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', (b.dataset.tool === 'pick' && (mode === 'pick' || mode === 'action')) || (b.dataset.tool === 'pose' && mode === 'pose')));
     if (!mode) { card.hidden = true; $('#hint').hidden = false; return; }
     $('#hint').hidden = true; card.hidden = false;
+    if (mode === 'ct') return renderCTCard(card);
     if (mode === 'pick') return renderPicker(card);
     if (mode === 'action') return renderActionCard(card);
     if (mode === 'pose') return renderPose(card);
@@ -637,12 +690,53 @@ footer.credit a { color: inherit; }
   function select(i, doFrame) {
     if (play.key && play.muscle >= 0 && i !== play.muscle) stopAction(true);
     if (i >= 0 && st.mode === 'pick') st.mode = null;
+    if (i >= 0) st.ct = -1;
     st.sel = i;
     if (i < 0) st.focus = false;
     if (i >= 0 && st.removed.has(i)) st.removed.delete(i);
     if (i >= 0 && st.layersOff.has(MU[i].layer) && !st.focus) st.layersOff.delete(MU[i].layer);
     apply(); renderCard();
     if (doFrame && i >= 0) frame(i, true);
+  }
+  // ---------- 筋膜／滑液囊／腱鞘的資訊卡
+  const CT_KIND = ['筋膜', '滑液囊', '腱鞘'];
+  function selectCT(k, doFrame) {
+    if (play.muscle >= 0) stopAction(true);
+    st.ct = k;
+    if (k >= 0) { st.sel = -1; st.focus = false; if (st.mode === 'pick') st.mode = null; }
+    apply(); renderCard();
+    if (doFrame && k >= 0) {
+      const c = CTM[k], dir = camera.position.clone().sub(controls.target).normalize();
+      tween(c.center.clone().addScaledVector(dir, Math.min(3.2, (c.radius * 4.5 + 0.3) / Math.sqrt(viewShift().vis))), c.center.clone());
+    }
+  }
+  function renderCTCard(card) {
+    const c = CTM[st.ct];
+    card.innerHTML = `
+      <div class="hd">
+        <button class="btn x" data-x aria-label="關閉">✕</button>
+        <h2>${c.zh}${c.side ? '（' + SIDE_ZH[c.side] + '）' : ''}</h2>
+        <div class="sub">${c.en}</div>
+        <div class="stats">
+          <div><small>種類</small><b><span class="pin" style="background:${CT_COL[c.k]}"></span>${CT_KIND[c.k]}</b></div>
+          <div><small>顯示全部${CT_KIND[c.k]}</small><b><button class="btn ${st.ctOn[c.k] ? 'on' : ''}" data-tog style="padding:2px 10px">${st.ctOn[c.k] ? '開' : '關'}</button></b></div>
+        </div>
+      </div>
+      <div class="bd">
+        <h4>功能</h4><p class="fn">${c.info}</p>
+        <h4>相鄰的肌肉</h4><div data-rel></div>
+        <div class="note">筋膜、滑液囊和腱鞘不算在肌肉的分層裡。它們是半透明的，打開後仍看得到底下的肌肉；在「顯示」裡可以分別開關。</div>
+      </div>`;
+    const rel = card.querySelector('[data-rel]');
+    if (c.rel.length) c.rel.forEach(i => {
+      const m = MU[i], b = document.createElement('button'); b.className = 'rel';
+      b.innerHTML = `<span class="dot" style="background:${layerHex(m.layer)}"></span><span class="nm">${label(m)}</span><span class="pc" style="grid-column: span 2">第 ${m.layer} 層</span>`;
+      b.onclick = () => select(i, true);
+      rel.appendChild(b);
+    });
+    else rel.innerHTML = '<p class="empty">附近沒有直接接觸的肌肉。</p>';
+    card.querySelector('[data-x]').onclick = () => selectCT(-1);
+    card.querySelector('[data-tog]').onclick = () => { st.ctOn[c.k] = !st.ctOn[c.k]; apply(); renderCard(); };
   }
   function removeMuscle(i) {
     st.removed.add(i); lastRemoved.push(i);
@@ -653,6 +747,7 @@ footer.credit a { color: inherit; }
   // ---------- camera
   let anim = null;
   function tween(toPos, toTarget, ms = 550) {
+    if (st.lock) return; // 鎖定視角：任何按鈕都不移動鏡頭
     const fp = camera.position.clone(), ft = controls.target.clone(), t0 = performance.now();
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     anim = now => {
@@ -696,22 +791,24 @@ footer.credit a { color: inherit; }
     const r = canvas.getBoundingClientRect();
     ndc.set((ev.clientX - r.left) / r.width * 2 - 1, -(ev.clientY - r.top) / r.height * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    const vis = meshes.filter(m => m.visible && !m.material.transparent);
+    const vis = meshes.filter(m => m.visible && !m.material.transparent).concat(ctMeshes.filter(m => m.visible));
     const hit = ray.intersectObjects(vis, false)[0];
-    return hit ? hit.object.userData.i : -1;
+    if (!hit) return -1;
+    return hit.object.userData.ct != null ? 100000 + hit.object.userData.ct : hit.object.userData.i;
   }
   let down = null, lastTap = 0, lastIdx = -2;
   canvas.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
   canvas.addEventListener('pointerup', e => {
     if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
     const i = pick(e), now = performance.now();
+    if (i >= 100000) { selectCT(i - 100000, false); lastIdx = -2; return; }
     if (i >= 0 && i === lastIdx && now - lastTap < 350) { removeMuscle(i); lastIdx = -2; return; }
     lastTap = now; lastIdx = i;
-    if (i >= 0) select(i, false); else if (st.sel >= 0 && !st.focus) select(-1);
+    if (i >= 0) select(i, false); else if (st.ct >= 0) selectCT(-1); else if (st.sel >= 0 && !st.focus) select(-1);
   });
   addEventListener('keydown', e => {
     if (e.target.matches('input')) return;
-    if (e.key === 'Escape') select(-1);
+    if (e.key === 'Escape') { if (st.ct >= 0) selectCT(-1); else select(-1); }
     if ((e.key === 'Delete' || e.key === 'Backspace') && st.sel >= 0) removeMuscle(st.sel);
   });
 
@@ -916,6 +1013,7 @@ footer.credit a { color: inherit; }
   function openTool(mode) {
     closeSheets();
     if (st.sel >= 0) { st.sel = -1; st.focus = false; }
+    st.ct = -1;
     if (play.muscle >= 0) stopAction(true);
     const wasOpen = st.mode === mode && !st.act;
     if (st.act) { st.act = null; stopAction(true); }
@@ -1109,6 +1207,23 @@ footer.credit a { color: inherit; }
   $('#mOpts').onclick = () => openSheet($('#toolbar'));
   $('#scrim').onclick = closeSheets;
   document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => openTool(b.dataset.tool));
+  // ---------- 鎖定視角：鏡頭只聽手指／滑鼠，按鈕不會自動轉正或拉近
+  function setLock(on, save) {
+    st.lock = on;
+    document.querySelectorAll('[data-lock]').forEach(b => {
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+      b.title = on ? '視角已鎖定：按鈕不會移動鏡頭（再按一次解鎖）' : '鎖定視角：按任何按鈕都不會移動鏡頭';
+      const sh = b.querySelector('.shackle'); if (sh) sh.setAttribute('d', on ? 'M8 11V7a4 4 0 0 1 8 0v4' : 'M8 11V7a4 4 0 0 1 7.5-2');
+      if (!b.querySelector('svg')) b.textContent = on ? '已鎖定' : '鎖定視角';
+    });
+    document.querySelectorAll('[data-view]').forEach(b => { b.disabled = on; });
+    if (on) anim = null;
+    try { lastOff = ''; } catch (e) {} // 載入時 resize 還沒定義，略過
+    if (save) try { localStorage.setItem('atlas-lock', on ? '1' : ''); } catch (e) {}
+  }
+  document.querySelectorAll('[data-lock]').forEach(b => b.onclick = () => setLock(!st.lock, true));
+  try { setLock(localStorage.getItem('atlas-lock') === '1', false); } catch (e) { setLock(false, false); }
+  document.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { const k = +b.dataset.ct; st.ctOn[k] = !st.ctOn[k]; apply(); if (st.ct >= 0) renderCard(); });
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
 
   // ---------- theme (自動 / 淺色 / 深色)
@@ -1169,7 +1284,7 @@ footer.credit a { color: inherit; }
   let lastOff = '';
   function viewShift() {
     const w = canvas.clientWidth, h = canvas.clientHeight, card = $('#card');
-    if (!card || card.hidden) return { x: 0, y: 0, vis: 1 };
+    if (!card || card.hidden || st.lock) return { x: 0, y: 0, vis: 1 };
     if (innerWidth <= 820) { const ch = card.offsetHeight, top = 56; return { x: 0, y: (ch - top) / 2, vis: Math.max(0.35, (h - ch - top) / h) }; }
     return { x: (card.offsetWidth + 12) / 2, y: 0, vis: 1 };
   }
@@ -1187,6 +1302,6 @@ footer.credit a { color: inherit; }
   paint(); apply(); renderCard();
   { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist()); }
   requestAnimationFrame(loop);
-  window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved, setBulge };
+  window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved, setBulge, selectCT, CTM };
 })();
 </script>

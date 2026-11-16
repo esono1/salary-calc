@@ -8,6 +8,7 @@ import { ZH, REGIONS, REGION_ORDER } from './zh.mjs';
 import { buildSkeleton, muscleWeights, segmentOf, SEGMENTS } from './rig.mjs';
 import { buildAttachments } from './attach.mjs';
 import { functionOf } from './func.mjs';
+import { collectCT, relatedMuscles } from './ct.mjs';
 
 const QUALITY = process.env.Q || 'economy';
 const OUT = process.env.OUT || 'out';
@@ -225,6 +226,11 @@ M.forEach((m, mi) => m.layer = layer[mi]);
 const hist = {}; M.forEach(m => hist[m.layer] = (hist[m.layer] || 0) + 1);
 console.log('layers', hist);
 
+// ---- fasciae, bursae, tendon sheaths
+const CT = collectCT({ manifest, en, meshes, ancestors, weld });
+CT.forEach(c => { c.w = muscleWeights(c.g, RIG.segBVH); c.rel = relatedMuscles(c.g, musB.bvh, vOwner, musIdx, M, c.side); });
+console.log('connective', CT.length, 'tris', CT.reduce((a, c) => a + c.g.idx.length / 3, 0));
+
 // ---- write binary
 const bb = new THREE.Box3();
 for (let i = 0; i < allM.pos.length; i += 3) bb.expandByPoint(p.fromArray(allM.pos, i));
@@ -247,6 +253,7 @@ const meta = {
 meta.bone = { nv: bone.pos.length / 3, ni: bone.idx.length, p: push(q(bone.pos)), i: push(bone.idx), s: push(bone.seg) };
 meta.skel = RIG.skel;
 meta.att = ATT.patches.map(pt => ({ m: pt.mus, t: pt.type, s: pt.seg, nv: pt.g.pos.length / 3, ni: pt.g.idx.length, p: push(q(pt.g.pos)), i: push(Uint16Array.from(pt.g.idx)) }));
+meta.ct = CT.map(c => ({ zh: c.zh, en: c.en, k: c.kind, side: c.side, info: c.info, rel: c.rel, nv: c.g.pos.length / 3, ni: c.g.idx.length, u32: c.g.pos.length / 3 > 65535 ? 1 : 0, p: push(q(c.g.pos)), i: push(c.g.pos.length / 3 > 65535 ? Uint32Array.from(c.g.idx) : Uint16Array.from(c.g.idx)), w: push(c.w) }));
 const bin = Buffer.concat(chunks);
 fs.writeFileSync(OUT + '/body.bin', zlib.gzipSync(bin, { level: 9 }));
 fs.writeFileSync(OUT + '/meta.json', JSON.stringify(meta));
