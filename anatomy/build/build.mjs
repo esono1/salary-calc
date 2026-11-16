@@ -11,6 +11,7 @@ import { functionOf } from './func.mjs';
 import { collectCT, relatedMuscles } from './ct.mjs';
 import { NERVE_ZH, innervationOf, lymphZh, lymphInfo, nerveInfo, cnsGroup } from './nerves.mjs';
 import { boneZh } from './attach.mjs';
+import { organZh, organKind, organInfo } from './organs.mjs';
 
 const QUALITY = process.env.Q || 'economy';
 const OUT = process.env.OUT || 'out';
@@ -36,6 +37,8 @@ await loadSystem('regions', 'economy');
 await loadSystem('insertions', 'economy');
 await loadSystem('nervous', 'economy');
 await loadSystem('lymphoid', 'economy');
+await loadSystem('cardiovascular', 'economy');
+await loadSystem('visceral', 'economy');
 
 function weld(g, flagFn) {
   const map = new Map(), pos = [], flag = [], idx = new Uint32Array(g.idx.length);
@@ -267,6 +270,17 @@ const SYS = [];
       if (!cns.has(grp)) cns.set(grp, []); cns.get(grp).push(weld(raw)); continue;
     }
     SYS.push({ en: name, zh: NERVE_ZH[name] || name, k: 'n', side, info: nerveInfo(name), g: weld(raw) });
+  }
+  // blood vessels (a artery, v vein) and organs (o); liver segments overlap the liver surface, so they are skipped
+  for (const s of manifest.structures) {
+    if (s.kind !== 'structure' || !s.meshes || (s.system !== 'cardiovascular' && s.system !== 'visceral')) continue;
+    const raw = meshes.get(s.meshes[0]); if (!raw) continue;
+    const name = (en[s.id]?.name || s.id).replace(/^\((.*)\)$/, '$1');
+    if (/segment of liver/.test(name)) continue;
+    const path = ancestors(s).join(' ');
+    const side = s.side === 'left' ? 'L' : s.side === 'right' ? 'R' : '';
+    const k = s.system === 'visceral' ? 'o' : organKind(name, path);
+    SYS.push({ en: name, zh: organZh(name, s.system) || name, k, side, info: organInfo(name, k, path), g: weld(raw) });
   }
   for (const [grp, list] of cns) {
     let g = mergeGeoms(list);
