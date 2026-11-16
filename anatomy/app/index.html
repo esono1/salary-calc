@@ -358,7 +358,7 @@ footer.credit a { color: inherit; }
       <h5 class="sec-h" data-sec="settings">關於</h5>
       <div class="grp ver" role="group" aria-label="版本" data-sec="settings">
         <span class="lab">版本</span>
-        <span class="vtxt" id="verTxt">網頁 2026.11.16-2110</span>
+        <span class="vtxt" id="verTxt">網頁 2026.11.17-0523</span>
         <span class="vbtns"><button class="btn" id="verCheck">檢查更新</button><button class="btn" id="apkBtn" hidden>更新 App</button></span>
       </div>
       <p class="about" data-sec="settings">模型：Z-Anatomy（CC BY-SA 4.0），源自 BodyParts3D © DBCLS。僅供學習與繪畫參考，非醫療用途。</p>
@@ -405,6 +405,23 @@ footer.credit a { color: inherit; }
   </main>
 </div>
 
+<script>
+// 出錯時直接在畫面上顯示原因（避免只剩黑畫面），方便截圖回報
+(function () {
+  function show(msg) {
+    var el = document.getElementById('fatal');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'fatal';
+      el.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));z-index:99;background:#fff3f3;color:#7a1020;border:1px solid #e2a0a8;border-radius:10px;padding:10px 12px;font:13px/1.6 system-ui,sans-serif;white-space:pre-wrap;word-break:break-word;box-shadow:0 6px 24px rgba(0,0,0,.3)';
+      (document.body || document.documentElement).appendChild(el);
+    }
+    el.textContent += (el.textContent ? '\n' : '出錯了，請截圖給開發者：\n') + msg;
+  }
+  window.__fatal = show;
+  window.addEventListener('error', function (e) { show((e.message || '錯誤') + (e.filename ? '（' + e.filename.split('/').pop() + ':' + e.lineno + '）' : '')); });
+  window.addEventListener('unhandledrejection', function (e) { var r = e.reason; show('未處理的錯誤：' + (r && (r.stack || r.message) || r)); });
+})();
+</script>
 <script>/**
  * @license
  * Copyright 2010-2022 Three.js Authors
@@ -1581,10 +1598,12 @@ footer.credit a { color: inherit; }
   // ---------- decode geometry
   let bytes;
   try {
-    const b64 = window.__parts ? window.__parts.join('') : document.getElementById('geo').textContent.trim();
+    let b64 = window.__parts ? window.__parts.join('') : document.getElementById('geo').textContent.trim();
+    window.__parts = null; // 釋放下載用的暫存
     $('#ldTxt').textContent = '正在建立模型…'; $('#ldBar').style.width = '100%';
     await new Promise(r => setTimeout(r, 30));
-    const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const raw = atob(b64); b64 = null;
+    const bin = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) bin[i] = raw.charCodeAt(i);
     const ds = new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'));
     bytes = await new Response(ds).arrayBuffer();
   } catch (e) {
@@ -1599,7 +1618,13 @@ footer.credit a { color: inherit; }
 
   // ---------- three setup
   const canvas = $('#gl');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); }
+  catch (e) { window.__fatal && __fatal('無法啟動 3D 繪圖（WebGL）：' + e.message); throw e; }
+  canvas.addEventListener('webglcontextlost', e => {
+    e.preventDefault();
+    window.__fatal && __fatal('3D 繪圖被系統中止，可能是手機的繪圖記憶體不夠。請把 App 滑掉重開；如果一直發生，到「圖層」關掉血管、內臟、神經等圖層，或在「設定」改用標準模型。');
+  });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 20);
@@ -3057,7 +3082,7 @@ footer.credit a { color: inherit; }
   };
 
   // ---------- 版本與更新：顯示目前版本，打開或切回 App 時檢查網站上有沒有新版
-  const PAGE_VERSION = '2026.11.16-2110';
+  const PAGE_VERSION = '2026.11.17-0523';
   let appVer = '';
   try { if (window.AndroidBridge && typeof AndroidBridge.appVersion === 'function') appVer = String(AndroidBridge.appVersion()); } catch (e) {}
   const OFFLINE = location.protocol === 'file:';

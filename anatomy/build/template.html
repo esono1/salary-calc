@@ -394,6 +394,23 @@ footer.credit a { color: inherit; }
   </main>
 </div>
 
+<script>
+// 出錯時直接在畫面上顯示原因（避免只剩黑畫面），方便截圖回報
+(function () {
+  function show(msg) {
+    var el = document.getElementById('fatal');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'fatal';
+      el.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));z-index:99;background:#fff3f3;color:#7a1020;border:1px solid #e2a0a8;border-radius:10px;padding:10px 12px;font:13px/1.6 system-ui,sans-serif;white-space:pre-wrap;word-break:break-word;box-shadow:0 6px 24px rgba(0,0,0,.3)';
+      (document.body || document.documentElement).appendChild(el);
+    }
+    el.textContent += (el.textContent ? '\n' : '出錯了，請截圖給開發者：\n') + msg;
+  }
+  window.__fatal = show;
+  window.addEventListener('error', function (e) { show((e.message || '錯誤') + (e.filename ? '（' + e.filename.split('/').pop() + ':' + e.lineno + '）' : '')); });
+  window.addEventListener('unhandledrejection', function (e) { var r = e.reason; show('未處理的錯誤：' + (r && (r.stack || r.message) || r)); });
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
 <script id="meta" type="application/json">__META__</script>
@@ -415,10 +432,12 @@ __GEO__
   // ---------- decode geometry
   let bytes;
   try {
-    const b64 = window.__parts ? window.__parts.join('') : document.getElementById('geo').textContent.trim();
+    let b64 = window.__parts ? window.__parts.join('') : document.getElementById('geo').textContent.trim();
+    window.__parts = null; // 釋放下載用的暫存
     $('#ldTxt').textContent = '正在建立模型…'; $('#ldBar').style.width = '100%';
     await new Promise(r => setTimeout(r, 30));
-    const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const raw = atob(b64); b64 = null;
+    const bin = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) bin[i] = raw.charCodeAt(i);
     const ds = new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'));
     bytes = await new Response(ds).arrayBuffer();
   } catch (e) {
@@ -433,7 +452,13 @@ __GEO__
 
   // ---------- three setup
   const canvas = $('#gl');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); }
+  catch (e) { window.__fatal && __fatal('無法啟動 3D 繪圖（WebGL）：' + e.message); throw e; }
+  canvas.addEventListener('webglcontextlost', e => {
+    e.preventDefault();
+    window.__fatal && __fatal('3D 繪圖被系統中止，可能是手機的繪圖記憶體不夠。請把 App 滑掉重開；如果一直發生，到「圖層」關掉血管、內臟、神經等圖層，或在「設定」改用標準模型。');
+  });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 20);
