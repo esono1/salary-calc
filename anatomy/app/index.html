@@ -293,7 +293,7 @@ footer.credit a { color: inherit; }
       </div>
       <div class="grp ver" role="group" aria-label="版本">
         <span class="lab">版本</span>
-        <span class="vtxt" id="verTxt">網頁 2026.11.16-1747</span>
+        <span class="vtxt" id="verTxt">網頁 2026.11.16-1756</span>
         <button class="btn" id="verCheck">檢查更新</button>
       </div>
       <div class="grp" role="group" aria-label="工具">
@@ -2782,7 +2782,7 @@ footer.credit a { color: inherit; }
   applyTheme(themePref, false);
 
   // ---------- Android App：App 外殼太舊時提醒重新安裝（網頁內容本身會自動更新）
-  const LATEST_APK = '1.3';
+  const LATEST_APK = '1.4';
   const APK_URL = 'https://esono1.github.io/salary-calc/anatomy/muscle-atlas.apk';
   const verLess = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
   try {
@@ -2799,10 +2799,14 @@ footer.credit a { color: inherit; }
   } catch (e) {}
 
   // ---------- 版本與更新：顯示目前版本，打開或切回 App 時檢查網站上有沒有新版
-  const PAGE_VERSION = '2026.11.16-1747';
+  const PAGE_VERSION = '2026.11.16-1756';
   let appVer = '';
   try { if (window.AndroidBridge && typeof AndroidBridge.appVersion === 'function') appVer = String(AndroidBridge.appVersion()); } catch (e) {}
-  $('#verTxt').textContent = '網頁 ' + PAGE_VERSION + (appVer ? '　App ' + appVer : '') + (location.protocol === 'file:' ? '（離線備份）' : '');
+  const OFFLINE = location.protocol === 'file:';
+  let offlineWhy = '';
+  try { const m = /offline=([^&]*)/.exec(location.hash); if (m) offlineWhy = decodeURIComponent(m[1]); } catch (e) {}
+  $('#verTxt').textContent = '網頁 ' + PAGE_VERSION + (appVer ? '　App ' + appVer : '') + (OFFLINE ? '（離線備份' + (offlineWhy ? '：' + offlineWhy : '') + '）' : '');
+  if (OFFLINE) $('#verCheck').textContent = '改用線上版';
   let checking = false, lastCheck = 0;
   async function latestVersion() {
     const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
@@ -2823,10 +2827,14 @@ footer.credit a { color: inherit; }
     u.hidden = false;
   }
   async function checkUpdate(manual) {
-    if (checking || location.protocol === 'file:') {
-      if (manual) { $('#verCheck').textContent = location.protocol === 'file:' ? '目前是離線備份，請連網後重開 App' : '檢查中…'; }
+    if (OFFLINE) {
+      if (!manual) return;
+      $('#verCheck').textContent = '連線中…';
+      try { if (window.AndroidBridge && typeof AndroidBridge.retryOnline === 'function') { AndroidBridge.retryOnline(); return; } } catch (e) {}
+      location.href = 'https://esono1.github.io/salary-calc/anatomy/app/';
       return;
     }
+    if (checking) return;
     checking = true; lastCheck = Date.now();
     if (manual) $('#verCheck').textContent = '檢查中…';
     try {
