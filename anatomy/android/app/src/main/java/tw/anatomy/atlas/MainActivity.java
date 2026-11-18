@@ -21,6 +21,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 /**
  * 肌肉圖譜 App。
@@ -36,6 +37,7 @@ public class MainActivity extends Activity {
     private WebView web;
     private FrameLayout frame;
     private boolean usingBuiltIn = false;
+    private long lastBack = 0;
 
     /** 網頁和 App 溝通用 */
     public class Bridge {
@@ -165,7 +167,14 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (web == null) { super.onBackPressed(); return; }
         web.evaluateJavascript("(function(){try{return !!(window.__back&&window.__back())}catch(e){return false}})()",
-                r -> { if (!"true".equals(r)) finish(); });
+                r -> {
+                    if ("true".equals(r)) return;
+                    // 沒有東西可以關了：兩秒內再按一次才離開，避免不小心退出
+                    long now = System.currentTimeMillis();
+                    if (now - lastBack < 2000) { finish(); return; }
+                    lastBack = now;
+                    Toast.makeText(this, "再按一次返回鍵離開", Toast.LENGTH_SHORT).show();
+                });
     }
 
     @Override
