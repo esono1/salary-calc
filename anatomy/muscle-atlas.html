@@ -364,7 +364,7 @@ footer.credit a { color: inherit; }
       <h5 class="sec-h" data-sec="settings">關於</h5>
       <div class="grp ver" role="group" aria-label="版本" data-sec="settings">
         <span class="lab">版本</span>
-        <span class="vtxt" id="verTxt">網頁 2026.11.18-1843</span>
+        <span class="vtxt" id="verTxt">網頁 2026.11.18-1855</span>
         <span class="vbtns"><button class="btn" id="verCheck">檢查更新</button><button class="btn" id="apkBtn" hidden>更新 App</button></span>
       </div>
       <p class="about" data-sec="settings">模型：Z-Anatomy（CC BY-SA 4.0），源自 BodyParts3D © DBCLS。僅供學習與繪畫參考，非醫療用途。</p>
@@ -1747,12 +1747,12 @@ footer.credit a { color: inherit; }
     ['站立', '基本', {}],
     ['雙手上舉', '基本', { ...both('arm', { z: 165 }) }],
     ['手臂平舉', '基本', { ...both('arm', { z: 88 }) }],
-    ['坐姿', '基本', { ...both('thigh', { x: 90 }), ...both('leg', { x: 90 }), ...both('arm', { x: 20 }), ...both('forearm', { x: 70 }) }],
+    ['坐姿', '基本', { ...both('thigh', { x: 90 }), ...both('leg', { x: 90 }), ...both('arm', { x: 12, z: 6, y: 15 }), ...both('forearm', { x: 50, y: 80 }), ...both('fingers', { x: 15 }) }],
     ['深蹲', '基本', { ...both('thigh', { x: 105, z: 15 }), ...both('leg', { x: 120 }), ...both('foot', { x: -20 }), ...both('arm', { x: 90 }), trunk: { x: 35 } }],
     ['揮手', '基本', { arm_R: { z: 120 }, forearm_R: { x: 60 }, hand_R: { z: 15 } }],
-    ['坐姿用電腦', '日常', { ...both('thigh', { x: 90 }), ...both('leg', { x: 90 }), ...both('arm', { x: 35, z: 8 }), ...both('forearm', { x: 85, y: 80 }), ...both('hand', { x: -18 }), ...both('fingers', { x: 15 }), trunk: { x: 12 }, neckhead: { x: 22 } }],
-    ['低頭滑手機', '日常', { ...both('arm', { x: 25, z: 4 }), ...both('forearm', { x: 110, y: 20 }), ...both('hand', { x: -10 }), trunk: { x: 6 }, neckhead: { x: 42 } }],
-    ['翹腳', '日常', { thigh_L: { x: 90 }, leg_L: { x: 90 }, thigh_R: { x: 108, z: -20, y: -8 }, leg_R: { x: 92 }, foot_R: { x: 18 }, ...both('arm', { x: 22 }), ...both('forearm', { x: 75 }), trunk: { x: 6, y: -5 } }],
+    ['坐姿用電腦', '日常', { ...both('thigh', { x: 90 }), ...both('leg', { x: 90 }), ...both('arm', { x: 22, z: 10, y: 12 }), ...both('forearm', { x: 62, y: 80 }), ...both('hand', { x: -15 }), ...both('fingers', { x: 25 }), trunk: { x: 10 }, neckhead: { x: 18 } }],
+    ['低頭滑手機', '日常', { ...both('arm', { x: 14, z: 8, y: 38 }), ...both('forearm', { x: 85, y: 5 }), ...both('hand', { x: -25 }), ...both('fingers', { x: 35 }), ...both('thumb', { z: 20 }), trunk: { x: 6 }, neckhead: { x: 42 } }],
+    ['翹腳', '日常', { thigh_L: { x: 90 }, leg_L: { x: 90 }, thigh_R: { x: 108, z: -20, y: -8 }, leg_R: { x: 92 }, foot_R: { x: 18 }, ...both('arm', { x: 18, z: 4, y: 20 }), ...both('forearm', { x: 55, y: 80 }), ...both('fingers', { x: 15 }), trunk: { x: 6, y: -5 } }],
     ['三七步', '日常', { pelvis: { z: 8, y: 8 }, thigh_R: { z: -8, y: -8 }, thigh_L: { x: 14, z: 10, y: -35 }, leg_L: { x: 22 }, foot_L: { x: 10 }, trunk: { z: 10, y: -6 }, neckhead: { z: -6 }, ...both('arm', { z: 5 }), ...both('forearm', { x: 10 }) }],
     ['彎腰撿東西', '日常', { pelvis: { x: 55 }, ...both('thigh', { x: 65 }), ...both('leg', { x: 25 }), ...both('foot', { x: -15 }), trunk: { x: 35 }, neckhead: { x: -20 }, ...both('arm', { x: 85 }), ...both('forearm', { x: 10 }) }],
     ['伸懶腰', '日常', { ...both('arm', { x: 170 }), ...both('forearm', { x: 8 }), ...both('scap', { z: 10 }), ...both('fingers', { x: -10 }), trunk: { x: -12 }, neckhead: { x: -15 } }],
@@ -1817,7 +1817,7 @@ footer.credit a { color: inherit; }
     '坐姿用電腦': ['打字時手臂往前伸、頭往前探，肩頸要長時間撐住手臂和頭的重量，是肩頸痠痛最常見的原因。', [
       ['nk_ext', '', '頭往前 2–3 公分，頸部後側肌群的負擔就多好幾公斤'],
       ['sc_elev', 'B', '上斜方肌、提肩胛肌撐住手臂，容易不自覺聳肩、變緊'],
-      ['sh_flex', 'B', '三角肌前束讓手臂維持往前放在鍵盤上'],
+      ['sh_flex', 'B', '三角肌前束讓手臂維持往前放在鍵盤上；鍵盤放太遠，這裡會更累'],
       ['pron', 'B', '旋前圓肌、旋前方肌讓手掌朝下'],
       ['wr_ext', 'B', '橈側伸腕肌讓手腕微微往上翹；長時間打字會累積在手肘外側（網球肘的位置）'],
       ['fi_flex', 'B', '屈指肌敲鍵盤、按滑鼠'],
@@ -1826,7 +1826,9 @@ footer.credit a { color: inherit; }
     '低頭滑手機': ['低頭時頭部重心往前移，低頭 45 度時頸部要撐的重量約是頭重的 4 倍。', [
       ['nk_ext', '', '頸部後側肌群（頭夾肌、半棘肌等）被拉長又要出力撐住頭'],
       ['sc_elev', 'B', '上斜方肌、提肩胛肌一起撐，肩頸容易緊'],
-      ['el_flex', 'B', '肱二頭肌、肱肌讓手肘彎著舉著手機'],
+      ['el_flex', 'B', '肱二頭肌、肱肌讓手肘彎著，把手機舉在胸前'],
+      ['sh_ir', 'B', '肩胛下肌、胸大肌讓兩隻前臂往中間靠，雙手一起拿手機'],
+      ['wr_ext', 'B', '手腕往上翹，讓螢幕朝向臉'],
       ['fi_flex', 'B', '屈指肌握住手機'],
       ['th_flex', 'B', '拇指肌群負責滑螢幕，滑太久會在拇指根部和手腕拇指側痠痛'],
       ['nk_flex', '', '頸部前側深層肌群處在縮短的位置', 's']]],
@@ -2182,7 +2184,7 @@ footer.credit a { color: inherit; }
   };
 
   // ---------- 版本與更新：顯示目前版本，打開或切回 App 時檢查網站上有沒有新版
-  const PAGE_VERSION = '2026.11.18-1843';
+  const PAGE_VERSION = '2026.11.18-1855';
   let appVer = '';
   try { if (window.AndroidBridge && typeof AndroidBridge.appVersion === 'function') appVer = String(AndroidBridge.appVersion()); } catch (e) {}
   const OFFLINE = location.protocol === 'file:';
@@ -2265,6 +2267,6 @@ footer.credit a { color: inherit; }
   paint(); apply(); renderCard();
   { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist() / Math.sqrt(viewShift().vis)); }
   requestAnimationFrame(loop);
-  window.__atlas = { meshes, camera, MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved, setBulge, selectCT, CTM, selectBone, selectSys, SYS, BONEN, stretched };
+  window.__atlas = { meshes, camera, controls, poseToRaw, MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved, setBulge, selectCT, CTM, selectBone, selectSys, SYS, BONEN, stretched };
 })();
 </script>
