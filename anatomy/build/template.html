@@ -124,7 +124,10 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 .seg { display: inline-flex; align-items: center; gap: 2px; margin-top: 10px; background: var(--bg); border-radius: 9px; padding: 3px; }
 .seg .lab { font-size: 11px; color: var(--muted); padding: 0 6px; }
 .pick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.pick.presets { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 10px; }
+.pick.presets { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pgrp { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); gap: 8px; align-items: start; margin-top: 8px; }
+.pgrp .pg { font-size: 11px; color: var(--muted); padding-top: 8px; letter-spacing: .06em; }
+.pk.sm.cur { border-color: var(--accent); background: var(--accent-soft); }
 .pk { border: 1px solid var(--line); background: var(--bg); border-radius: 9px; padding: 7px 10px; text-align: left; cursor: pointer; font: inherit; color: var(--fg); min-width: 0; }
 .pk:hover { border-color: var(--accent); }
 .pk:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -1640,6 +1643,7 @@ __DATA__
     ['trunk', '軀幹', false, [['x', '前屈', -25, 80, 1], ['z', '側彎（往右為正）', -40, 40, 1], ['y', '旋轉（往左為正）', -45, 45, 1]]],
     ['neckhead', '頸', false, [['x', '低頭', -60, 60, 1], ['z', '側彎（往右為正）', -45, 45, 1], ['y', '轉頭（往左為正）', -80, 80, 1]]],
     ['jaw', '下顎', false, [['x', '張嘴', 0, 30, 1]]],
+    ['pelvis', '骨盆', false, [['x', '前傾', -20, 20, 1], ['z', '側傾（左側下沉為正）', -15, 15, -1], ['y', '旋轉（往左為正）', -30, 30, 1]]],
   ];
   const SPLIT = { trunk: [['lumbar', 0.4], ['thorax', 0.6]], neckhead: [['neck', 0.6], ['head', 0.4]] };
   function poseToRaw() {
@@ -1660,15 +1664,54 @@ __DATA__
     if (!play.key) poseBones(null);
   }
   const both = (b, v) => ({ [b + '_L']: { ...v }, [b + '_R']: { ...v } });
+  // 預設姿勢：[名稱, 分組, 角度]；有第四項時會在兩個姿勢之間來回播放（第四項是另一個姿勢，通常是左右對調）
+  const mirrorPose = v => {
+    const o = {};
+    for (const k in v) {
+      const m = /_(L|R)$/.exec(k), nk = m ? k.slice(0, -1) + (m[1] === 'L' ? 'R' : 'L') : k, val = { ...v[k] };
+      if (!m) { if (val.y) val.y = -val.y; if (val.z) val.z = -val.z; }
+      o[nk] = val;
+    }
+    return o;
+  };
+  const WALK = { thigh_L: { x: 25 }, leg_L: { x: 8 }, foot_L: { x: -6 }, thigh_R: { x: -14 }, leg_R: { x: 18 }, foot_R: { x: 16 }, arm_R: { x: 22, z: 6 }, forearm_R: { x: 22 }, arm_L: { x: -18, z: 6 }, forearm_L: { x: 14 }, trunk: { y: -4 }, pelvis: { y: 4 } };
+  const RUN = { thigh_L: { x: 65 }, leg_L: { x: 95 }, foot_L: { x: -10 }, thigh_R: { x: -20 }, leg_R: { x: 55 }, foot_R: { x: 25 }, arm_R: { x: 55, z: 8 }, forearm_R: { x: 90 }, arm_L: { x: -35, z: 8 }, forearm_L: { x: 80 }, trunk: { x: 8, y: -6 }, pelvis: { y: 6 } };
   const PRESETS = [
-    ['站立', {}],
-    ['雙手上舉', { ...both('arm', { z: 165 }) }],
-    ['手臂平舉', { ...both('arm', { z: 88 }) }],
-    ['坐姿', { ...both('thigh', { x: 90 }), ...both('leg', { x: 90 }), ...both('arm', { x: 20 }), ...both('forearm', { x: 70 }) }],
-    ['跑步', { arm_R: { x: 55 }, forearm_R: { x: 90 }, arm_L: { x: -35 }, forearm_L: { x: 80 }, thigh_L: { x: 65 }, leg_L: { x: 95 }, thigh_R: { x: -20 }, leg_R: { x: 55 }, trunk: { x: 8 } }],
-    ['深蹲', { ...both('thigh', { x: 105, z: 15 }), ...both('leg', { x: 120 }), ...both('foot', { x: -20 }), ...both('arm', { x: 90 }), trunk: { x: 35 } }],
-    ['揮手', { arm_R: { z: 120 }, forearm_R: { x: 60 }, hand_R: { z: 15 } }],
+    ['站立', '基本', {}],
+    ['雙手上舉', '基本', { ...both('arm', { z: 165 }) }],
+    ['手臂平舉', '基本', { ...both('arm', { z: 88 }) }],
+    ['坐姿', '基本', { ...both('thigh', { x: 90 }), ...both('leg', { x: 90 }), ...both('arm', { x: 20 }), ...both('forearm', { x: 70 }) }],
+    ['深蹲', '基本', { ...both('thigh', { x: 105, z: 15 }), ...both('leg', { x: 120 }), ...both('foot', { x: -20 }), ...both('arm', { x: 90 }), trunk: { x: 35 } }],
+    ['揮手', '基本', { arm_R: { z: 120 }, forearm_R: { x: 60 }, hand_R: { z: 15 } }],
+    ['坐姿用電腦', '日常', { ...both('thigh', { x: 90 }), ...both('leg', { x: 90 }), ...both('arm', { x: 35, z: 8 }), ...both('forearm', { x: 85, y: 80 }), ...both('hand', { x: -18 }), ...both('fingers', { x: 15 }), trunk: { x: 12 }, neckhead: { x: 22 } }],
+    ['低頭滑手機', '日常', { ...both('arm', { x: 25, z: 4 }), ...both('forearm', { x: 110, y: 20 }), ...both('hand', { x: -10 }), trunk: { x: 6 }, neckhead: { x: 42 } }],
+    ['翹腳', '日常', { thigh_L: { x: 90 }, leg_L: { x: 90 }, thigh_R: { x: 108, z: -20, y: -8 }, leg_R: { x: 92 }, foot_R: { x: 18 }, ...both('arm', { x: 22 }), ...both('forearm', { x: 75 }), trunk: { x: 6, y: -5 } }],
+    ['三七步', '日常', { pelvis: { z: 8, y: 8 }, thigh_R: { z: -8, y: -8 }, thigh_L: { x: 14, z: 10, y: -35 }, leg_L: { x: 22 }, foot_L: { x: 10 }, trunk: { z: 10, y: -6 }, neckhead: { z: -6 }, ...both('arm', { z: 5 }), ...both('forearm', { x: 10 }) }],
+    ['彎腰撿東西', '日常', { pelvis: { x: 55 }, ...both('thigh', { x: 65 }), ...both('leg', { x: 25 }), ...both('foot', { x: -15 }), trunk: { x: 35 }, neckhead: { x: -20 }, ...both('arm', { x: 85 }), ...both('forearm', { x: 10 }) }],
+    ['伸懶腰', '日常', { ...both('arm', { x: 170 }), ...both('forearm', { x: 8 }), ...both('scap', { z: 10 }), ...both('fingers', { x: -10 }), trunk: { x: -12 }, neckhead: { x: -15 } }],
+    ['走路', '運動', WALK, mirrorPose(WALK), 1100],
+    ['跑步', '運動', RUN, mirrorPose(RUN), 700],
   ];
+  // 兩個姿勢之間來回播放
+  const poseAnim = { on: false, a: null, b: null, t0: 0, period: 1000 };
+  function startPoseAnim(a, b, period) { Object.assign(poseAnim, { on: true, a, b, period, t0: performance.now() }); }
+  function stopPoseAnim() {
+    if (!poseAnim.on) return; poseAnim.on = false;
+    for (const k in st.poseVals) for (const ax in st.poseVals[k]) st.poseVals[k][ax] = Math.round(st.poseVals[k][ax]);
+    poseToRaw();
+  }
+  function tickPose(now) {
+    if (!poseAnim.on) return;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const t = ((now - poseAnim.t0) % poseAnim.period) / poseAnim.period, p = reduce ? 0 : (1 - Math.cos(t * Math.PI * 2)) / 2;
+    const keys = new Set([...Object.keys(poseAnim.a), ...Object.keys(poseAnim.b)]), out = {};
+    for (const k of keys) {
+      const A = poseAnim.a[k] || {}, B = poseAnim.b[k] || {}, v = {};
+      for (const ax of ['x', 'y', 'z']) { const x = (A[ax] || 0) + ((B[ax] || 0) - (A[ax] || 0)) * p; if (x) v[ax] = x; }
+      out[k] = v;
+    }
+    st.poseVals = out; poseToRaw();
+  }
   function renderPose(card) {
     const S = st.poseSide;
     card.innerHTML = `
@@ -1676,7 +1719,8 @@ __DATA__
         <button class="btn x" data-x aria-label="關閉">✕</button>
         <h2>擺姿勢</h2>
         <div class="sub">拖曳滑桿調整關節角度，可以和肌肉動作一起使用。</div>
-        <div class="pick presets">${PRESETS.map((p, k) => `<button class="pk sm" data-pre="${k}"><b>${p[0]}</b></button>`).join('')}</div>
+        ${['基本', '日常', '運動'].map(g => `<div class="pgrp"><span class="pg">${g}</span><div class="pick presets">${PRESETS.map((p, k) => p[1] !== g ? '' : `<button class="pk sm ${st.poseName === p[0] ? 'cur' : ''}" data-pre="${k}"><b>${p[0]}${p[3] ? ' ▶' : ''}</b></button>`).join('')}</div></div>`).join('')}
+        ${poseAnim.on ? `<div class="moves"><button class="move on" data-stopanim><span class="ic">■</span><span><b>停止播放</b><small>${st.poseName}</small></span></button></div>` : ''}
         <div class="seg" role="group" aria-label="四肢哪一側">
           <span class="lab">四肢</span><button class="btn ${S === 'R' ? 'on' : ''}" data-ps="R">右側</button><button class="btn ${S === 'L' ? 'on' : ''}" data-ps="L">左側</button>
         </div>
@@ -1684,16 +1728,22 @@ __DATA__
       <div class="bd">${JOINTS.map(([b, zh, sided, dofs]) => {
         const key = b + (sided ? '_' + S : ''), v = st.poseVals[key] || {};
         return `<h4>${sided ? SIDE_ZH[S] : ''}${zh}</h4>` + dofs.map(([ax, nm, lo, hi]) => `
-          <label class="sl"><span>${nm}</span><input type="range" id="pz-${key}-${ax}" min="${lo}" max="${hi}" step="1" value="${v[ax] || 0}" data-j="${key}" data-ax="${ax}"><output>${v[ax] || 0}°</output></label>`).join('');
+          <label class="sl"><span>${nm}</span><input type="range" id="pz-${key}-${ax}" min="${lo}" max="${hi}" step="1" value="${Math.round(v[ax] || 0)}" data-j="${key}" data-ax="${ax}"><output>${Math.round(v[ax] || 0)}°</output></label>`).join('');
       }).join('')}</div>`;
     card.querySelector('[data-x]').onclick = () => { st.mode = null; renderCard(); };
     card.querySelectorAll('[data-ps]').forEach(b => b.onclick = () => { st.poseSide = b.dataset.ps; renderCard(); });
     card.querySelectorAll('[data-pre]').forEach(b => b.onclick = () => {
-      st.poseVals = JSON.parse(JSON.stringify(PRESETS[+b.dataset.pre][1])); poseToRaw(); renderCard();
+      const P = PRESETS[+b.dataset.pre];
+      st.poseName = P[0];
+      if (P[3]) startPoseAnim(P[2], P[3], P[4] || 1000); else stopPoseAnim();
+      st.poseVals = JSON.parse(JSON.stringify(P[2])); poseToRaw();
+      renderCard();
       const t = viewTarget(); t.y -= 0.05;
       tween(t.clone().addScaledVector(new THREE.Vector3(-0.55, 0.12, 0.83).normalize(), fitDist() / Math.sqrt(viewShift().vis)), t);
     });
+    const sa = card.querySelector('[data-stopanim]'); if (sa) sa.onclick = () => { stopPoseAnim(); renderCard(); };
     card.querySelectorAll('input[data-j]').forEach(inp => inp.oninput = () => {
+      if (poseAnim.on) { stopPoseAnim(); const b = card.querySelector('[data-stopanim]'); if (b) b.closest('.moves').remove(); }
       const v = (st.poseVals[inp.dataset.j] ||= {}); v[inp.dataset.ax] = +inp.value;
       inp.nextElementSibling.textContent = inp.value + '°';
       poseToRaw();
@@ -1992,7 +2042,7 @@ __DATA__
       camera.updateProjectionMatrix();
     }
   }
-  function loop(now) { resize(); if (anim) anim(now); tickAction(now); controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
+  function loop(now) { resize(); if (anim) anim(now); tickPose(now); tickAction(now); controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
   paint(); apply(); renderCard();
   { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist() / Math.sqrt(viewShift().vis)); }
   requestAnimationFrame(loop);
