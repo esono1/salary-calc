@@ -159,6 +159,15 @@ public class MainActivity extends Activity {
         web.loadUrl(BUILT_IN + "#offline=" + Uri.encode(why == null ? "" : why));
     }
 
+    /** 返回鍵：交給網頁先關掉開著的選單或卡片；網頁沒有東西可以關時才離開 App */
+    @SuppressWarnings("deprecation")
+    @Override
+    public void onBackPressed() {
+        if (web == null) { super.onBackPressed(); return; }
+        web.evaluateJavascript("(function(){try{return !!(window.__back&&window.__back())}catch(e){return false}})()",
+                r -> { if (!"true".equals(r)) finish(); });
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);

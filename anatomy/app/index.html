@@ -375,7 +375,7 @@ footer.credit a { color: inherit; }
       <h5 class="sec-h" data-sec="settings">關於</h5>
       <div class="grp ver" role="group" aria-label="版本" data-sec="settings">
         <span class="lab">版本</span>
-        <span class="vtxt" id="verTxt">網頁 2026.11.18-1855</span>
+        <span class="vtxt" id="verTxt">網頁 2026.11.18-1949</span>
         <span class="vbtns"><button class="btn" id="verCheck">檢查更新</button><button class="btn" id="apkBtn" hidden>更新 App</button></span>
       </div>
       <p class="about" data-sec="settings">模型：Z-Anatomy（CC BY-SA 4.0），源自 BodyParts3D © DBCLS。僅供學習與繪畫參考，非醫療用途。</p>
@@ -1963,8 +1963,13 @@ footer.credit a { color: inherit; }
     if (nq.length >= 2 && norm(m.zh).includes(nq)) return true;
     return ALIAS.some(([keys, re]) => keys.some(k => k === q || (q.length >= 2 && (k.includes(q) || q.includes(k))) || (nq.length >= 2 && norm(k).includes(nq))) && re.test(m.zh));
   }
+  // 清單內容只跟這些狀態有關；沒變就不重畫（拖分離滑桿、播放動作時每次重畫幾百列會很卡）
+  let lastListKey = '';
   function renderList() {
     const q = $('#q').value.trim().toLowerCase().replace(/[\s　]+/g, '');
+    const key = [q, st.sel, st.sys, st.bone, st.ct, st.side, [...st.removed].join(), JSON.stringify(st.sysOn), st.ctOn.join()].join('|');
+    if (key === lastListKey) return;
+    lastListKey = key;
     const frag = document.createDocumentFragment();
     groups.forEach(g => {
       const items = g.items.filter(ix => !q || searchHit(MU[ix[0]], q));
@@ -2854,6 +2859,7 @@ footer.credit a { color: inherit; }
   }
   function tickPose(now) {
     if (!poseAnim.on) return;
+    if (st.mode !== 'pose') { stopPoseAnim(); return; }   // 離開擺姿勢就停在當下的姿勢
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const t = ((now - poseAnim.t0) % poseAnim.period) / poseAnim.period, p = reduce ? 0 : (1 - Math.cos(t * Math.PI * 2)) / 2;
     const keys = new Set([...Object.keys(poseAnim.a), ...Object.keys(poseAnim.b)]), out = {};
@@ -3041,7 +3047,7 @@ footer.credit a { color: inherit; }
     const sa = card.querySelector('[data-stopanim]'); if (sa) sa.onclick = () => { stopPoseAnim(); renderCard(); };
     const pw = card.querySelector('[data-pw]'); if (pw) pw.onclick = () => { st.poseWork = !st.poseWork; apply(); renderCard(); };
     const pg = card.querySelector('[data-pg]'); if (pg) pg.onclick = () => { st.poseGhost = !st.poseGhost; apply(); renderCard(); };
-    card.querySelectorAll('[data-mu]').forEach(b => b.onclick = () => select(+b.dataset.mu, false));
+    card.querySelectorAll('[data-mu]').forEach(b => b.onclick = () => select(+b.dataset.mu, true));
     card.querySelectorAll('input[data-j]').forEach(inp => inp.oninput = () => {
       if (poseAnim.on) { stopPoseAnim(); const b = card.querySelector('[data-stopanim]'); if (b) b.closest('.moves').remove(); }
       if (st.poseName) { st.poseName = null; card.querySelector('.work')?.remove(); card.querySelectorAll('.pk.sm.cur').forEach(b => b.classList.remove('cur')); apply(); }
@@ -3105,6 +3111,18 @@ footer.credit a { color: inherit; }
   try { if (localStorage.getItem('atlas-quality') === 'hd') setTimeout(loadHD, 300); } catch (e) {}
 
   // ---------- mobile sheets
+  // Android 返回鍵：先關選單，再關卡片（一層一層往回），都關了才讓 App 退出
+  window.__back = () => {
+    try {
+      if ($('#toolbar').classList.contains('open') || $('#index').classList.contains('open')) { closeSheets(); return true; }
+      const card = $('#card');
+      if (card && !card.hidden) {
+        const b = card.querySelector('[data-back], #cback') || card.querySelector('[data-x], #cx');
+        if (b) { b.click(); return true; }
+      }
+    } catch (e) {}
+    return false;
+  };
   function closeSheets() { $('#toolbar').classList.remove('open'); $('#index').classList.remove('open'); $('#scrim').hidden = true; updateTabs(); }
   function openSheet(el, sec) {
     const same = el.classList.contains('open') && (!sec || el.dataset.sec === sec);
@@ -3232,7 +3250,7 @@ footer.credit a { color: inherit; }
   applyTheme(themePref, false);
 
   // ---------- Android App：App 外殼太舊時提醒重新安裝（網頁內容本身會自動更新）
-  const LATEST_APK = '1.6';
+  const LATEST_APK = '1.7';
   const APK_URL = 'https://esono1.github.io/salary-calc/anatomy/muscle-atlas.apk';
   const verLess = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
   try {
@@ -3269,7 +3287,7 @@ footer.credit a { color: inherit; }
   };
 
   // ---------- 版本與更新：顯示目前版本，打開或切回 App 時檢查網站上有沒有新版
-  const PAGE_VERSION = '2026.11.18-1855';
+  const PAGE_VERSION = '2026.11.18-1949';
   let appVer = '';
   try { if (window.AndroidBridge && typeof AndroidBridge.appVersion === 'function') appVer = String(AndroidBridge.appVersion()); } catch (e) {}
   const OFFLINE = location.protocol === 'file:';
