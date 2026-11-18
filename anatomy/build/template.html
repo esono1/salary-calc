@@ -125,6 +125,20 @@ input[type=range] { width: 90px; accent-color: var(--accent); }
 .seg .lab { font-size: 11px; color: var(--muted); padding: 0 6px; }
 .pick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .pick.presets { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.work { margin: 4px 0 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.work h4 { margin-top: 2px; }
+.pwy { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin: 2px 0 6px; }
+.pwy.leg { margin-top: 8px; }
+.seg.sm2 { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 2px; }
+.seg.sm2 button { font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: none; color: inherit; cursor: pointer; }
+.seg.sm2 button.on { border-color: var(--accent); background: var(--accent-soft); }
+.pw { padding: 8px 0 6px; border-top: 1px dashed var(--line); }
+.pw:first-of-type { border-top: 0; }
+.pwh { font-size: 13.5px; display: flex; align-items: center; }
+.pwm { display: flex; flex-wrap: wrap; gap: 5px; }
+.mc { font-size: 12px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel, transparent); color: inherit; cursor: pointer; }
+.mc.p { font-weight: 600; border-color: #e2556380; }
+.mc:hover { background: var(--accent-soft); }
 .pgrp { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); gap: 8px; align-items: start; margin-top: 8px; }
 .pgrp .pg { font-size: 11px; color: var(--muted); padding-top: 8px; letter-spacing: .06em; }
 .pk.sm.cur { border-color: var(--accent); background: var(--accent-soft); }
@@ -572,7 +586,7 @@ __DATA__
   $('#count').textContent = new Set(MU.map(m => m.en)).size + ' 種、' + MU.length;
 
   // ---------- state
-  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0, ct: -1, ctOn: [false, false, false], bone: -1, sys: -1, sysOn: { n: false, l: false, b: false, o: false }, quiz: null, mode: null, act: null, att: true, pose: {}, poseVals: {}, poseSide: 'R', pickSide: 'R' };
+  const st = { color: 'layer', side: '', layersOff: new Set(), removed: new Set(), sel: -1, focus: false, explode: 0, ct: -1, ctOn: [false, false, false], bone: -1, sys: -1, sysOn: { n: false, l: false, b: false, o: false }, quiz: null, mode: null, act: null, att: true, pose: {}, poseVals: {}, poseSide: 'R', pickSide: 'R', poseWork: true, poseGhost: true, poseFlip: false };
 
   // ---------- 起點／止點：骨頭上的附著區塊（紅 = 起點，藍 = 止點），永遠畫在最上層
   const attMat = [
@@ -691,6 +705,8 @@ __DATA__
       if (st.act) { mesh.visible = true; mat.transparent = false; mat.opacity = 1; mat.depthWrite = true; mesh.renderOrder = 0; }
       mat.color.set('#c9c2ff'); mat.emissive.set('#3b2fa8'); mat.emissiveIntensity = 0.5;
     });
+    // 擺姿勢：標出這個姿勢用到的肌肉
+    paintPoseWork();
     // 測驗：認名字時標亮題目、讓蓋住它的肌肉變透明；作答後標出正解（綠）和點錯的（紅）
     const qz = st.mode === 'quiz' && st.quiz && st.quiz.target >= 0 ? st.quiz : null;
     if (qz) {
@@ -720,6 +736,7 @@ __DATA__
     else {
       if (st.sel >= 0 || st.bone >= 0 || st.sys >= 0 || st.ct >= 0) items.push(dot(SEL_COL, '選取'));
       if (play.key || st.act) { if (st.act) items.push(dot('#e25563', '主要'), dot('#e8a33a', '輔助')); else items.push(dot('#e25563', '收縮')); items.push(dot('#7d72e8', '被拉長')); }
+      if (lastWork) items.push(dot('#e25563', '主要出力'), dot('#e8a33a', '輔助'), dot('#7d72e8', '被拉長'));
       if (st.sel >= 0 && st.att && attOf[st.sel].length) items.push(dot('#e5484d', '起點'), dot('#2f7de1', '止點'));
       if (st.sysOn.b) items.push(dot(SYS_COL.a, '動脈'), dot(SYS_COL.v, '靜脈'));
     }
@@ -928,7 +945,7 @@ __DATA__
     applyCardH();
   }
   addEventListener('resize', () => applyCardH());
-  function renderCard() { renderCardInner(); decorateCard(); try { updateTabs(); } catch (e) {} }
+  function renderCard() { if (!!lastWork !== !!poseWorkMap()) apply(); renderCardInner(); decorateCard(); try { updateTabs(); } catch (e) {} }
   function renderCardInner() {
     const card = $('#card');
     const mode = st.mode === 'quiz' ? 'quiz' : st.sel >= 0 ? 'muscle' : st.ct >= 0 ? 'ct' : st.bone >= 0 ? 'bone' : st.sys >= 0 ? 'sys' : st.mode === 'pick' ? 'pick' : st.act ? 'action' : st.mode === 'pose' ? 'pose' : null;
@@ -1711,6 +1728,149 @@ __DATA__
       out[k] = v;
     }
     st.poseVals = out; poseToRaw();
+    const flip = p > 0.5;
+    if (flip !== st.poseFlip) { st.poseFlip = flip; if (lastWork) paintPoseWork(); }
+  }
+  // ---------- 每個姿勢用到的肌肉：[動作, 側別, 說明, 's' = 被拉長]；側別 L / R / B（雙側）/ ''（不分側）
+  // 走路、跑步寫的是「左腳在前」的那一刻，播放到另一半時左右對調
+  const WORK = {
+    '站立': ['站著幾乎不費力：身體重心落在腳踝前方一點點，靠小腿和背部肌肉持續微微出力修正。', [
+      ['an_plan', 'B', '比目魚肌一直在小幅出力，防止身體往前倒，是站立時最忙的肌肉'],
+      ['tr_ext', '', '豎脊肌、多裂肌輕微出力，維持脊椎直立'],
+      ['nk_ext', '', '頸部後側肌群撐住頭部重量']]],
+    '雙手上舉': ['手臂舉過頭需要三角肌、棘上肌抬手臂，同時斜方肌、前鋸肌把肩胛骨往上轉，手臂才舉得到頂。', [
+      ['sh_abd', 'B', '三角肌中束和棘上肌把手臂往上舉'],
+      ['sh_flex', 'B', '三角肌前束協助把手臂舉到頭頂'],
+      ['sc_elev', 'B', '上斜方肌讓肩胛骨上提、上轉'],
+      ['sc_pro', 'B', '前鋸肌把肩胛骨貼著胸廓往外上方轉，手臂才能舉過 120 度'],
+      ['sh_add', 'B', '胸大肌、背闊肌被拉長', 's']]],
+    '手臂平舉': ['手臂伸直平舉時，力臂最長，三角肌要撐住整條手臂的重量。', [
+      ['sh_abd', 'B', '三角肌中束和棘上肌等長收縮，撐住手臂'],
+      ['sc_elev', 'B', '上斜方肌穩住肩胛骨，肩膀容易跟著聳起來'],
+      ['el_ext', 'B', '肱三頭肌讓手肘保持伸直']]],
+    '坐姿': ['坐著時骨盆和椅子承重，下肢肌肉幾乎放鬆，主要靠背部和頸部肌肉維持上半身。', [
+      ['tr_ext', '', '豎脊肌、多裂肌維持上半身直立；駝背時它們會被拉長、長時間緊繃'],
+      ['nk_ext', '', '頸部後側肌群撐住頭'],
+      ['hip_flex', 'B', '髂腰肌長時間處在縮短的位置，久坐容易變緊', 's']]],
+    '深蹲': ['蹲下時是「離心收縮」：肌肉一邊被拉長一邊出力，控制身體慢慢往下；站起來時同一群肌肉改成縮短出力。', [
+      ['kn_ext', 'B', '股四頭肌是主力，控制膝蓋彎曲、再把膝蓋推直'],
+      ['hip_ext', 'B', '臀大肌、腿後肌群控制髖部彎曲，站起時把骨盆往前推'],
+      ['an_plan', 'B', '比目魚肌、腓腸肌穩住小腿，讓膝蓋能往前'],
+      ['tr_ext', '', '豎脊肌讓背部保持平直，不駝背'],
+      ['hip_add', 'B', '內收大肌協助伸髖、穩住膝蓋方向']]],
+    '揮手': ['揮手時手臂抬起，靠手肘和肩膀的旋轉來回擺動。', [
+      ['sh_abd', 'R', '三角肌中束、棘上肌把手臂舉到側邊'],
+      ['el_flex', 'R', '肱二頭肌、肱肌讓手肘彎著'],
+      ['sh_er', 'R', '棘下肌、小圓肌把前臂往外轉（揮出去）'],
+      ['sh_ir', 'R', '肩胛下肌、胸大肌把前臂往內轉（揮回來）'],
+      ['sc_elev', 'R', '上斜方肌穩住肩胛骨']]],
+    '坐姿用電腦': ['打字時手臂往前伸、頭往前探，肩頸要長時間撐住手臂和頭的重量，是肩頸痠痛最常見的原因。', [
+      ['nk_ext', '', '頭往前 2–3 公分，頸部後側肌群的負擔就多好幾公斤'],
+      ['sc_elev', 'B', '上斜方肌、提肩胛肌撐住手臂，容易不自覺聳肩、變緊'],
+      ['sh_flex', 'B', '三角肌前束讓手臂維持往前放在鍵盤上'],
+      ['pron', 'B', '旋前圓肌、旋前方肌讓手掌朝下'],
+      ['wr_ext', 'B', '橈側伸腕肌讓手腕微微往上翹；長時間打字會累積在手肘外側（網球肘的位置）'],
+      ['fi_flex', 'B', '屈指肌敲鍵盤、按滑鼠'],
+      ['tr_ext', '', '豎脊肌維持坐姿；一駝背就變成被拉長'],
+      ['hip_flex', 'B', '髂腰肌長時間縮短', 's']]],
+    '低頭滑手機': ['低頭時頭部重心往前移，低頭 45 度時頸部要撐的重量約是頭重的 4 倍。', [
+      ['nk_ext', '', '頸部後側肌群（頭夾肌、半棘肌等）被拉長又要出力撐住頭'],
+      ['sc_elev', 'B', '上斜方肌、提肩胛肌一起撐，肩頸容易緊'],
+      ['el_flex', 'B', '肱二頭肌、肱肌讓手肘彎著舉著手機'],
+      ['fi_flex', 'B', '屈指肌握住手機'],
+      ['th_flex', 'B', '拇指肌群負責滑螢幕，滑太久會在拇指根部和手腕拇指側痠痛'],
+      ['nk_flex', '', '頸部前側深層肌群處在縮短的位置', 's']]],
+    '翹腳': ['翹起來的那隻腿要靠髖部肌肉抬著、往內夾；骨盆會跟著歪，久了腰部兩側受力不平均。', [
+      ['hip_flex', 'R', '髂腰肌、股直肌把右大腿抬到左腿上'],
+      ['hip_add', 'R', '內收肌群把右腿往內夾、跨過去'],
+      ['hip_abd', 'R', '右側臀中肌、臀小肌、闊筋膜張肌被拉長', 's'],
+      ['tr_lat', 'L', '骨盆歪向一側時，腰方肌和側腹肌會一側縮短、一側拉長'],
+      ['tr_ext', '', '豎脊肌維持上半身坐直']]],
+    '三七步': ['把重心放在一隻腳上，另一側骨盆往下沉。支撐腳一側不太靠肌肉，而是「掛」在髂脛束和韌帶上，久站時比較省力，但長期習慣會讓左右不對稱。', [
+      ['hip_abd', 'R', '支撐腳（右）的臀中肌、臀小肌被拉長，只剩少量出力，靠髂脛束撐住', 's'],
+      ['an_plan', 'R', '支撐腳的比目魚肌維持平衡'],
+      ['tr_lat', 'R', '骨盆往左下沉時，右側腰方肌、側腹肌出力把上半身拉回中間'],
+      ['hip_er', 'L', '放鬆的那隻腳（左）稍微外轉、膝蓋微彎，肌肉大多休息']]],
+    '彎腰撿東西': ['彎腰主要是髖關節在動。往下時臀大肌、腿後肌群一邊被拉長一邊出力（離心收縮）控制速度，撿起來時再收縮把上半身拉回來。', [
+      ['hip_ext', 'B', '臀大肌、腿後肌群是主力，往下時被拉長，起身時收縮'],
+      ['tr_ext', '', '豎脊肌、多裂肌讓背部保持平直；彎腰時背拱起來，負擔會轉到腰椎和韌帶'],
+      ['kn_ext', 'B', '膝蓋微彎時股四頭肌幫忙分擔'],
+      ['an_plan', 'B', '小腿肌群穩住重心不往前倒'],
+      ['nk_ext', '', '抬頭看地上的東西']]],
+    '伸懶腰': ['伸懶腰同時把手臂舉高、身體往後仰，讓久坐縮短的胸前、腹部和體側肌肉一次拉長。', [
+      ['sh_flex', 'B', '三角肌前束把手臂舉到頭頂'],
+      ['sc_pro', 'B', '前鋸肌把肩胛骨往上轉'],
+      ['sc_elev', 'B', '上斜方肌一起把肩胛骨往上轉'],
+      ['tr_ext', '', '豎脊肌讓上半身往後仰'],
+      ['fi_ext', 'B', '伸指肌把手指張開'],
+      ['sh_ext', 'B', '背闊肌、大圓肌被拉長', 's'],
+      ['tr_flex', '', '腹直肌、腹斜肌被拉長', 's']]],
+    '走路': ['走路是左右腳輪流「支撐、蹬地、擺動、著地」。畫面上的顏色會跟著步伐左右交替。以下是左腳在前的那一刻。', [
+      ['an_dorsi', 'L', '前腳（左）：脛前肌勾起腳尖，讓腳跟先著地、不會拖到地'],
+      ['kn_ext', 'L', '前腳著地時，股四頭肌穩住膝蓋，承接體重'],
+      ['hip_ext', 'L', '前腳著地後，臀大肌、腿後肌群開始把身體往前推'],
+      ['an_plan', 'R', '後腳（右）蹬地：腓腸肌、比目魚肌是走路最主要的推進力'],
+      ['hip_flex', 'R', '後腳離地後，髂腰肌把大腿往前擺'],
+      ['hip_abd', 'L', '支撐腳的臀中肌穩住骨盆，另一側才不會往下掉'],
+      ['sh_flex', 'R', '手臂和對側的腳交替擺動，大多是被動擺盪'],
+      ['sh_ext', 'L', '另一隻手往後擺']]],
+    '跑步': ['跑步比走路多了「騰空期」，每一步落地的衝擊約是體重的 2–3 倍，肌肉出力和收縮速度都大很多。畫面上的顏色會跟著步伐左右交替。以下是左腳在前的那一刻。', [
+      ['an_plan', 'R', '後腳（右）蹬地：小腿三頭肌爆發收縮，把身體往前上方推'],
+      ['hip_ext', 'R', '臀大肌、腿後肌群把大腿往後推'],
+      ['kn_ext', 'R', '股四頭肌把膝蓋推直'],
+      ['hip_flex', 'L', '前腳（左）抬膝：髂腰肌、股直肌把大腿往前上拉'],
+      ['kn_flex', 'L', '腿後肌群讓小腿往後收，縮短擺動的距離'],
+      ['sh_flex', 'R', '手肘彎著，手臂主動前後擺，抵銷下半身的扭轉'],
+      ['sh_ext', 'L', '另一隻手往後擺'],
+      ['el_flex', 'B', '肱二頭肌、肱肌讓手肘維持彎曲'],
+      ['tr_flex', '', '腹肌穩住軀幹，避免上半身過度扭轉']]],
+  };
+  const flipSide = (sd, f) => !f ? sd : sd === 'L' ? 'R' : sd === 'R' ? 'L' : sd;
+  // 某一項的肌肉：Map<肌肉, 是否主要>
+  function workItem(key, sd) {
+    if (sd !== 'B') return involved(key, sd || 'R');
+    const a = involved(key, 'L'); for (const [i, p] of involved(key, 'R')) a.set(i, p); return a;
+  }
+  // 目前姿勢要上色的肌肉：Map<肌肉, 'p' | 'a' | 's'>
+  function poseWorkMap() {
+    const W = st.mode === 'pose' && st.poseWork && !play.key && st.poseName && WORK[st.poseName];
+    if (!W) return null;
+    const out = new Map();
+    for (const [key, sd, , kind] of W[1]) for (const [i, p] of workItem(key, flipSide(sd, st.poseFlip))) {
+      if (kind === 's') { if (!out.has(i)) out.set(i, 's'); } else if (out.get(i) !== 'p') out.set(i, p ? 'p' : 'a');
+    }
+    return out;
+  }
+  function paintWork(i, r) {
+    if (i === st.sel) return;
+    const mesh = meshes[i], mat = mesh.material;
+    if (r) {
+      if (!st.removed.has(i) && (!st.side || MU[i].side === st.side || !MU[i].side)) mesh.visible = true;
+      mat.transparent = false; mat.opacity = 1; mat.depthWrite = true; mesh.renderOrder = 0;
+      mat.color.set(r === 'p' ? '#ff8f8f' : r === 'a' ? '#ffd28a' : '#c9c2ff');
+      mat.emissive.set(r === 'p' ? '#a01c2c' : r === 'a' ? '#8a5a00' : '#3b2fa8'); mat.emissiveIntensity = r === 's' ? 0.5 : 0.45;
+    } else {
+      const g = st.poseGhost; mat.transparent = g; mat.opacity = g ? 0.1 : 1; mat.depthWrite = !g; mesh.renderOrder = g ? 2 : 0;
+      mat.color.set('#ffffff'); mat.emissive.set('#000000'); mat.emissiveIntensity = 0;
+    }
+  }
+  let lastWork = null;
+  function paintPoseWork() { lastWork = poseWorkMap(); if (lastWork) MU.forEach((m, i) => paintWork(i, lastWork.get(i))); }
+  function workHTML() {
+    const W = st.poseName && WORK[st.poseName];
+    if (!W) return '';
+    const items = W[1].map(([key, sd, why, kind]) => {
+      const m = workItem(key, sd), seen = new Set(), list = [];
+      [...m.entries()].sort((x, y) => (y[1] - x[1]) || (MU[x[0]].layer - MU[y[0]].layer)).forEach(([i, p]) => { if (!seen.has(MU[i].zh)) { seen.add(MU[i].zh); list.push([i, p]); } });
+      const name = ACTIONS[key][0].replace(/（轉向同側）/, '');
+      const lab = sd === 'B' ? '雙側' + name : sd ? SIDE_ZH[sd] + name : name;
+      return `<div class="pw"><div class="pwh"><span class="pin ${kind === 's' ? 's' : 'p'}"></span><b>${kind === 's' ? '被拉長：負責' + lab + '的肌肉' : lab}</b></div><div class="pwy">${why}</div>
+        <div class="pwm">${list.map(([i, p]) => `<button class="mc ${kind === 's' ? '' : p ? 'p' : ''}" data-mu="${i}">${MU[i].zh}</button>`).join('') || '<span class="pwy">（資料裡沒有對應的肌肉）</span>'}</div></div>`;
+    }).join('');
+    return `<section class="work"><h4>這個姿勢用到的肌肉</h4><p class="pwy">${W[0]}</p>
+      <div class="seg sm2"><button class="${st.poseWork ? 'on' : ''}" data-pw>在模型上標色</button><button class="${st.poseGhost ? 'on' : ''}" data-pg>其他肌肉變透明</button></div>
+      ${st.poseWork ? '<div class="pwy leg"><span class="pin p"></span>主要出力　<span class="pin a"></span>輔助　<span class="pin s"></span>被拉長</div>' : ''}
+      ${items}<div class="note">靜態姿勢多半是「等長收縮」：肌肉出力但長度不變，用來撐住身體對抗重力。點肌肉名稱可以看它的位置和詳細資料。</div></section>`;
   }
   function renderPose(card) {
     const S = st.poseSide;
@@ -1725,7 +1885,7 @@ __DATA__
           <span class="lab">四肢</span><button class="btn ${S === 'R' ? 'on' : ''}" data-ps="R">右側</button><button class="btn ${S === 'L' ? 'on' : ''}" data-ps="L">左側</button>
         </div>
       </div>
-      <div class="bd">${JOINTS.map(([b, zh, sided, dofs]) => {
+      <div class="bd">${workHTML()}${JOINTS.map(([b, zh, sided, dofs]) => {
         const key = b + (sided ? '_' + S : ''), v = st.poseVals[key] || {};
         return `<h4>${sided ? SIDE_ZH[S] : ''}${zh}</h4>` + dofs.map(([ax, nm, lo, hi]) => `
           <label class="sl"><span>${nm}</span><input type="range" id="pz-${key}-${ax}" min="${lo}" max="${hi}" step="1" value="${Math.round(v[ax] || 0)}" data-j="${key}" data-ax="${ax}"><output>${Math.round(v[ax] || 0)}°</output></label>`).join('');
@@ -1734,16 +1894,20 @@ __DATA__
     card.querySelectorAll('[data-ps]').forEach(b => b.onclick = () => { st.poseSide = b.dataset.ps; renderCard(); });
     card.querySelectorAll('[data-pre]').forEach(b => b.onclick = () => {
       const P = PRESETS[+b.dataset.pre];
-      st.poseName = P[0];
+      st.poseName = P[0]; st.poseFlip = false;
       if (P[3]) startPoseAnim(P[2], P[3], P[4] || 1000); else stopPoseAnim();
       st.poseVals = JSON.parse(JSON.stringify(P[2])); poseToRaw();
-      renderCard();
+      apply(); renderCard();
       const t = viewTarget(); t.y -= 0.05;
       tween(t.clone().addScaledVector(new THREE.Vector3(-0.55, 0.12, 0.83).normalize(), fitDist() / Math.sqrt(viewShift().vis)), t);
     });
     const sa = card.querySelector('[data-stopanim]'); if (sa) sa.onclick = () => { stopPoseAnim(); renderCard(); };
+    const pw = card.querySelector('[data-pw]'); if (pw) pw.onclick = () => { st.poseWork = !st.poseWork; apply(); renderCard(); };
+    const pg = card.querySelector('[data-pg]'); if (pg) pg.onclick = () => { st.poseGhost = !st.poseGhost; apply(); renderCard(); };
+    card.querySelectorAll('[data-mu]').forEach(b => b.onclick = () => select(+b.dataset.mu, false));
     card.querySelectorAll('input[data-j]').forEach(inp => inp.oninput = () => {
       if (poseAnim.on) { stopPoseAnim(); const b = card.querySelector('[data-stopanim]'); if (b) b.closest('.moves').remove(); }
+      if (st.poseName) { st.poseName = null; card.querySelector('.work')?.remove(); card.querySelectorAll('.pk.sm.cur').forEach(b => b.classList.remove('cur')); apply(); }
       const v = (st.poseVals[inp.dataset.j] ||= {}); v[inp.dataset.ax] = +inp.value;
       inp.nextElementSibling.textContent = inp.value + '°';
       poseToRaw();
@@ -2042,10 +2206,15 @@ __DATA__
       camera.updateProjectionMatrix();
     }
   }
-  function loop(now) { resize(); if (anim) anim(now); tickPose(now); tickAction(now); controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
+  // three.js r147 畫「半透明＋雙面」材質時會暫時切換正反面；材質從半透明變回實心後，鏡像的左半邊肌肉會沿用錯的著色器，看起來一半暗掉。
+  // 每次切換半透明時強制重新編譯，就不會殘留。
+  function syncTransparency() {
+    for (const m of meshes) { const mat = m.material; if (mat.userData.tr !== mat.transparent) { if (mat.userData.tr !== undefined) mat.needsUpdate = true; mat.userData.tr = mat.transparent; } }
+  }
+  function loop(now) { resize(); if (anim) anim(now); tickPose(now); tickAction(now); controls.update(); syncTransparency(); renderer.render(scene, camera); requestAnimationFrame(loop); }
   paint(); apply(); renderCard();
   { const t = viewTarget(); controls.target.copy(t); camera.position.set(t.x, t.y, t.z + fitDist() / Math.sqrt(viewShift().vis)); }
   requestAnimationFrame(loop);
-  window.__atlas = { MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved, setBulge, selectCT, CTM, selectBone, selectSys, SYS, BONEN, stretched };
+  window.__atlas = { meshes, camera, MU, select, st, play, poseBones, startAction, ACTIONS, openTool, chooseAction, involved, setBulge, selectCT, CTM, selectBone, selectSys, SYS, BONEN, stretched };
 })();
 </script>
