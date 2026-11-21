@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6f5e">
 <title>薪資計算</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="salary-page-version" content="2026.11.19.50">
+<meta name="salary-page-version" content="2026.11.21.51">
 <meta name="salary-app-api" content="1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -220,6 +220,9 @@ td.zero { color: var(--muted); opacity: .6; }
 .row .v { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .row .v.neg { color: var(--danger); }
 .row.total { font-size: 16px; }
+.rows .note-row { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.note-row .k small { white-space: pre-wrap; word-break: break-word; color: var(--text); font-size: 13.5px; }   /* 備註內容 */
+.note-row .v { color: var(--muted); font-size: 20px; }
 .ti { width: 96px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 6px 8px; text-align: right; font-variant-numeric: tabular-nums; }
 .ti.wide { width: auto; flex: 1; min-width: 0; text-align: left; }
 
@@ -1177,6 +1180,16 @@ function lateCard(k, c) {
     : `<p class="note" style="margin:0">本月沒有遲到紀錄（在每日登錄填「遲到（分鐘）」）。</p>`;
   return `<div class="card"><h2>遲到統計<span class="hint">${days.length ? `${days.length} 次・合計 ${fix(c.late, 1)} 分鐘` : '0 次'}</span></h2>${body}</div>`;
 }
+// 備註：列出這個月有寫備註的日子，點一下跳到那天的每日登錄
+function noteCard(k) {
+  const m = state.months[k], { y, m: mm } = parseYM(k);
+  const days = Object.keys((m && m.days) || {}).map(Number).filter(d => String(m.days[d].note || '').trim()).sort((a, b) => a - b);
+  const body = days.length ? `<div class="rows">
+      ${days.map(d => `<button class="row note-row" data-act="gotoDay" data-d="${d}"><div class="k">${mm}/${d}（${WD[new Date(y, mm - 1, d).getDay()]}）<small>${esc(m.days[d].note.trim())}</small></div><div class="v">›</div></button>`).join('')}
+    </div>`
+    : `<p class="note" style="margin:0">本月沒有備註（在每日登錄最下面的「備註」填寫）。</p>`;
+  return `<div class="card"><h2>備註<span class="hint">${days.length} 天</span></h2>${body}</div>`;
+}
 // 打開月結算、或從別的 App 切回來時重讀休假表；同一個月份一分鐘內不重複讀
 // （假表系統有流量上限，網站本身也快取 60 秒，再快讀到的也是同一份）
 const LEAVE_MIN_GAP = 60 * 1000;
@@ -1263,6 +1276,8 @@ function renderMonth() {
     ${leaveCard(k, c)}
 
     ${lateCard(k, c)}
+
+    ${noteCard(k)}
 
     <div class="card">
       <h2>獎金與津貼<span class="hint">年資 ${fix(c.sen, 1)} 個月 · 乘數 ${c.tier.mult}</span></h2>
@@ -1356,6 +1371,8 @@ async function monthAction(act, ds) {
     if (await ask('把計算規則恢復成預設值？', '恢復')) { state.rules = clone(DEFAULT_RULES); save(); renderSettings(); toast('已恢復預設規則'); }
   } else if (act === 'export') {
     exportData();
+  } else if (act === 'gotoDay') {                     // 月結算的備註：跳到那天的每日登錄
+    selDay = +ds.d; curTab = 'daily'; render(); window.scrollTo(0, 0);
   } else if (act === 'iosHintOff') {
     try { localStorage.setItem(IOS_HINT_KEY, '1'); } catch (e) { /* 略過 */ }
     renderDaily();
